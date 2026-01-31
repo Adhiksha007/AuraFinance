@@ -16,7 +16,7 @@ A comprehensive AI-powered finance application featuring a React frontend and va
    cd backend
    ```
 
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment(Optional):
    ```bash
    python -m venv venv
    # Windows

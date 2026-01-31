@@ -1,0 +1,84 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+:root {
+  --background: 210 40% 96.1%;
+  /* #F1F5F9 Slate 100 */
+  --foreground: 215 27.9% 16.9%;
+  /* #1E293B Slate 800 */
+  --card: 0 0% 100%;
+  /* #FFFFFF */
+  --card-foreground: 215 27.9% 16.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 215 27.9% 16.9%;
+  --primary: 160 84% 39%;
+  /* #059669 Emerald 600 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  /* #F1F5F9 */
+  --secondary-foreground: 215 27.9% 16.9%;
+  --muted: 210 40% 96.1%;
+  /* #F1F5F9 */
+  --muted-foreground: 215 16.3% 46.9%;
+  /* Slate 500 */
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 215 27.9% 16.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  /* Slate 200 */
+  --input: 214.3 31.8% 91.4%;
+  --ring: 160 84% 39%;
+  --radius: 0.5rem;
+  --glass: rgba(255, 255, 255, 0.65);
+  --gradient-primary: linear-gradient(to right, #0EA5E9, #8B5CF6);
+  /* Sky -> Violet */
+}
+
+.dark {
+  --background: 222.2 47.4% 11.2%;
+  /* #0F172A Slate 900 */
+  --foreground: 210 40% 98%;
+  /* #F8FAFC Slate 50 */
+  --card: 217.2 32.6% 17.5%;
+  /* #1E293B Slate 800 */
+  --card-foreground: 210 40% 98%;
+  --popover: 217.2 32.6% 17.5%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 199 98% 60%;
+  /* #38BDF8 Sky 400 */
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  /* Slate 400 */
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 199 98% 60%;
+  --glass: rgba(15, 23, 42, 0.75);
+  --gradient-primary: linear-gradient(to right, #38BDF8, #E879F9);
+  /* Sky -> Fuchsia */
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

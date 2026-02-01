@@ -1,4 +1,4 @@
-import type { SimulationRequest, SimulationResult } from "../types/goal";
+import type { SimulationResult } from "../types/goal";
 import apiClient from "../api/apiClient";
 import type { GoalBase } from "../types/goal"; // Added this import based on the change in simulateGoal signature
 

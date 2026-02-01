@@ -1,6 +1,6 @@
 import { motion, type Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Shield, ArrowRight, Zap, Globe, PieChart, Menu, X, Plus } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, Globe, PieChart, Menu, X, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Landing() {

@@ -15,10 +15,7 @@ requests
 joblib
 pydantic-settings
 feedparser 
-transformers  
-hf_xet
-hf_transfer
-torch 
+
 scipy
 qiskit==1.2.4 
 qiskit-aer 

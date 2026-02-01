@@ -4,35 +4,26 @@ import datetime
 import numpy as np
 import pandas as pd
 import feedparser
-import torch
+import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Dict, Any, Optional
-from scipy.special import softmax
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 class SentimentAnalyzer:
     def __init__(self, tickers: List[str], model_name: str = "ProsusAI/finbert"):
-        self.model_name = model_name
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Updated URL from api-inference to router as per HF 410 Deprecation Error
+        self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
+        self.api_token = os.getenv("HF_API_KEY")
+        self.headers = {"Authorization": f"Bearer {self.api_token}"} if self.api_token else {}
+        
         self.sentiment = None
         self.news_data = None
         self.last_updated = None
         self.tickers = tickers
         self.cache_duration = datetime.timedelta(hours=1)
         
-        print(f"--- Initializing Sentiment Analyzer on {self.device} ---")
-        
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
-            self.model = AutoModelForSequenceClassification.from_pretrained(
-                model_name, local_files_only=True
-            ).to(self.device)
-            print("🚀 Success: Loaded model from local cache.")
-        except Exception:
-            print("📥 Model not found locally. Downloading...")
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_name).to(self.device)
-            print("✅ Setup complete.")
+        print(f"--- Initializing Sentiment Analyzer (HF API: {model_name}) ---")
+        if not self.api_token:
+            print("⚠️ WARNING: HF_API_KEY not found. Sentiment analysis may fail or be rate-limited.")
         
         self.build_dataframe(tickers)
 
@@ -54,16 +45,68 @@ class SentimentAnalyzer:
         except Exception:
             return []
 
+    def _query_hf_api(self, inputs: List[str]) -> List[List[Dict[str, Any]]]:
+        """Send payloads to HF Inference API."""
+        if not inputs: return []
+        
+        # HF API often accepts list of strings
+        try:
+            response = requests.post(self.api_url, headers=self.headers, json={"inputs": inputs})
+            if response.status_code != 200:
+                print(f"❌ HF API Error {response.status_code}: {response.text}")
+                return []
+            return response.json()
+        except Exception as e:
+            print(f"❌ HF API Request Failed: {e}")
+            return []
+
     def _score_texts(self, texts: List[str]) -> np.ndarray:
-        """Batch process sentiment scores."""
+        """Batch process sentiment scores via API."""
         if not texts: return np.array([])
         
-        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True).to(self.device)
-        with torch.no_grad():
-            outputs = self.model(**inputs)
+        # API might reject huge batches, so we might need chunking if list is very long.
+        # For now, we'll try sending all, or chunking loosely if needed.
+        # Let's chunk safely to 20 items per request to avoid payload limits/timeouts.
+        chunk_size = 20
+        all_scores = []
         
-        probs = softmax(outputs.logits.cpu().numpy(), axis=1)
-        return probs[:, 2] - probs[:, 0]  # Positive - Negative
+        for i in range(0, len(texts), chunk_size):
+            chunk = texts[i:i+chunk_size]
+            api_response = self._query_hf_api(chunk)
+            
+            # Response format for classification: [[{'label': 'positive', 'score': 0.9}, ...], ...]
+            # FinBERT labels: 'positive', 'negative', 'neutral'
+            
+            # Check for failure or empty response
+            if not api_response or not isinstance(api_response, list):
+                # Request likely failed
+                all_scores.extend([0.0] * len(chunk))
+                continue
+            
+            # Additional check: API sometimes returns a dict on error even with 200 OK (rare but possible)
+            if isinstance(api_response, dict) and 'error' in api_response:
+                 all_scores.extend([0.0] * len(chunk))
+                 continue
+
+            for item in api_response:
+                if isinstance(item, list): 
+                    # item is list of dicts [{'label': 'positive', 'score': X}, ...]
+                    # Map to score: Pos - Neg
+                    score_map = {res['label'].lower(): res['score'] for res in item}
+                    pos = score_map.get('positive', 0.0)
+                    neg = score_map.get('negative', 0.0)
+                    # neu = score_map.get('neutral', 0.0)
+                    all_scores.append(pos - neg)
+                else:
+                    # Unexpected format or error dict in list
+                    all_scores.append(0.0)
+            
+            # Safety fill: if for some reason we didn't get enough scores for this chunk
+            expected_len = len(all_scores) + (len(chunk) - len(api_response))
+            while len(all_scores) < (i + len(chunk)):
+                 all_scores.append(0.0)
+
+        return np.array(all_scores)
 
     def get_news(self, tickers: List[str], timeout: int, limit: Optional[int] = None) ->pd.DataFrame:
         print(f"🔄 Processing {len(tickers)} tickers...")
@@ -98,8 +141,8 @@ class SentimentAnalyzer:
             self.news_data, self.sentiment = pd.DataFrame(), pd.DataFrame()
             return
 
-        # 3. Batch Scoring (Only once for the whole DataFrame)
-        print(f"🧠 Scoring {len(df)} headlines...")
+        # 3. Batch Scoring
+        print(f"🧠 Scoring {len(df)} headlines via Hugging Face API...")
         df["Sentiment"] = self._score_texts(df["Title"].tolist())
 
         # 4. Data Cleaning & Aggregation

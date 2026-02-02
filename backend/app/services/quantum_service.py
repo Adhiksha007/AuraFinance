@@ -8,24 +8,23 @@ from qiskit.primitives import Sampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 
-# from app.services.sentiment import sentiment_engine
+from app.services.sentiment import sentiment_engine
 
 ALPHA = 0.05
 
 def compute_mu_cov(returns: pd.DataFrame, tickers: List[str]) -> Tuple[pd.Series, pd.DataFrame]:
     # 1. Base Stats
-    print("Computing mu and cov")
     mu = returns.mean(axis=0) * 252.0
     cov = returns.cov() * 252.0
     
-    print("Computing sentiment")
     _, sentiment_wide = sentiment_engine.get_latest_sentiment()
     s = sentiment_wide.iloc[-1].T.reindex(mu.index) 
 
-    print("Reindexed sentiment scores")
     mu_adjusted = mu + (ALPHA * s)
-    print("Computed mu and cov")
-    return mu_adjusted, cov
+
+    mu_clean = np.nan_to_num(mu_adjusted.astype(float), nan=0.0, posinf=0.0, neginf=0.0)
+    cov_clean = np.nan_to_num(cov.astype(float), nan=0.0, posinf=0.0, neginf=0.0)
+    return pd.Series(mu_clean, index=mu.index), pd.DataFrame(cov_clean, index=cov.index, columns=cov.columns)
 
 def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int, assets: List[str]) -> QuadraticProgram:
     """
@@ -54,7 +53,6 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
     # Adaptive lambda scaling: lower user_risk → higher penalty on variance
     lam_min, lam_max = 0.1, 10
     lam = lam_min + (1 - user_risk)**2 * (lam_max - lam_min)
-    print(f"Lambda scaling factor: {lam:.4f}")
 
     # Linear term: reward for return
     linear = {assets[i]: -mu.iloc[i] for i in range(n)}
@@ -63,15 +61,15 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
     quadratic = {(assets[i], assets[j]): lam * cov_matrix.iloc[i, j] for i in range(n) for j in range(n)}
 
     # Scale linear term by lambda/avg_vol to normalize return vs risk
-    avg_vol = np.sqrt(np.mean(np.diag(cov_matrix)))
+    avg_vol = np.sqrt(np.mean(np.abs(np.diag(cov_matrix))))
     
     linear_scaled = {}
     for asset, val in linear.items():
-        linear_scaled[asset] = float(val * (lam / avg_vol))
+        linear_scaled[asset] = float(np.real(val * (lam / avg_vol)))
 
     quadratic_scaled = {}
     for key, val in quadratic.items():
-        quadratic_scaled[key] = float(val * lam)
+        quadratic_scaled[key] = float(np.real(val * lam))
 
     qp.minimize(linear=linear_scaled, quadratic=quadratic_scaled)
 
@@ -89,26 +87,19 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
     return qubo
 
 def solve_qubo_with_qaoa(qubo: QuadraticProgram, assets: List[str], reps: int=2, maxiter: int=200) -> Tuple[np.ndarray, List[str]]:
-    print("Solving QUBO with QAOA")
     optimizer = COBYLA(maxiter=maxiter)
 
     # Sampler does not take a seed
-    print("Sampler")
     sampler = Sampler()  # exact expectation-based
 
     # Initialize QAOA
-    print("QAOA")
     qaoa = QAOA(sampler=sampler, reps=reps, optimizer=optimizer)
 
     # Solve with MinimumEigenOptimizer
-    print("Solver")
     solver = MinimumEigenOptimizer(qaoa)
-    print("Result")
     result = solver.solve(qubo)
 
-    print("Sel Vec")
     selection_vec = np.array([int(result[x.name]) for x in qubo.variables])
-    print("Sel Aes")
     selected_assets = [assets[i] for i, v in enumerate(selection_vec) if v > 0]
 
     return selection_vec, selected_assets

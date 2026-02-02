@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './components/auth/Auth';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
-// import Portfolio from './pages/Portfolio';
+import Portfolio from './pages/Portfolio';
 import StockPicks from './pages/StockPicks';
 import News from './pages/News';
 import Watchlist from './pages/Watchlist';
@@ -63,7 +63,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/portfolio" element={<PlaceholderPage title="Portfolio" />} />
+                  <Route path="/portfolio" element={<Portfolio />} />
                   <Route path="/stock-picks" element={<StockPicks />} />
                   <Route path="/news" element={<News />} />
                   <Route path="/market-trends" element={<MarketTrends />} />

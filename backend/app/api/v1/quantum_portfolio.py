@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from app.services.data_ingestion import fetch_data, calculate_annual_returns, create_table_values, calculate_portfolio_beta
 from app.services.quantum_service import compute_mu_cov, build_qubo, solve_qubo_with_qaoa, unified_portfolio_analysis, monte_carlo_simulation
 from app.services.tickers import get_tickers
-# from app.services.sentiment import sentiment_engine
+from app.services.sentiment import sentiment_engine
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -38,14 +38,12 @@ def optimize_portfolio(request: PortfolioRequest):
     Optimizes portfolio using Quantum/QAOA and returns comprehensive analysis.
     """
     try:
-        print("Got data")
         results, table_data, port_beta, sentiment = quantum_portfolio_logic(
             request.risk_tolerance,
             request.investment_amount,
             request.investment_horizon,
             request.num_assets
         )
-        print("Got Overall results")
         # Convert table_data (DataFrame) to dict records for JSON response
         table_data_json = table_data.to_dict(orient="records") if not table_data.empty else []
         sentiment_json = sentiment.to_dict() if not sentiment.empty else []
@@ -100,9 +98,6 @@ def fetch_and_update_data(assets, force_refresh=False):
     # 1. Load existing data
     if os.path.exists(PKL_FILE) and not force_refresh:
         data = joblib.load(PKL_FILE)    
-        print(f"📂 Loaded existing data from {PKL_FILE}")
-    else:
-        print("♻️ Starting fresh download...")
 
     today_dt = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     today_str = today_dt.strftime('%Y-%m-%d')
@@ -117,7 +112,6 @@ def fetch_and_update_data(assets, force_refresh=False):
         if data[asset]["info"] is None or force_refresh:
             try:
                 data[asset]["info"] = ticker.info
-                print(f"ℹ️ Fetched info for {asset}")
             except Exception as e:
                 print(f"⚠️ Info error for {asset}: {e}")
 
@@ -131,7 +125,6 @@ def fetch_and_update_data(assets, force_refresh=False):
                     hist.columns = hist.columns.get_level_values(0)
                     hist.index = hist.index.tz_localize(None).normalize()
                     data[asset]["history"] = hist
-                    print(f"⬇️ Downloaded full history for {asset}")
             except Exception as e:
                 print(f"⚠️ Download error for {asset}: {e}")
         
@@ -142,7 +135,6 @@ def fetch_and_update_data(assets, force_refresh=False):
             
             # If the last date in our file is already Today, don't even call the API
             if last_date >= today_dt:
-                print(f"✅ {asset} is already up to date (Last record: {last_date.date()}).")
                 continue
 
             # Attempt to fetch from the day after our last record
@@ -163,18 +155,12 @@ def fetch_and_update_data(assets, force_refresh=False):
                         data[asset]["history"] = pd.concat([existing_hist, new_rows])
                         # Safety: remove any accidental duplicates
                         data[asset]["history"] = data[asset]["history"][~data[asset]["history"].index.duplicated(keep='last')]
-                        print(f"🔄 Updated {asset}: Added {len(new_rows)} new days.")
-                    else:
-                        print(f"☕ {asset}: No new trading days found (Market likely closed).")
-                else:
-                    print(f"☕ {asset}: No new data returned (Market likely closed).")
                     
             except Exception as e:
                 print(f"⚠️ Update error for {asset}: {e}")
 
     # 4. Save
     joblib.dump(data, PKL_FILE)
-    print(f"💾 Data saved to {PKL_FILE}")
     return data
 
 def fetch_and_cache_data(force_refresh=False):
@@ -193,15 +179,10 @@ def fetch_and_cache_data(force_refresh=False):
 
 def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, investment_horizon: int, k: int) -> Tuple[Dict[str, Any], pd.DataFrame, Optional[float]]:
     tickers = get_tickers()
-    print("Got tickers")
     returns = fetch_and_cache_data()
-    print("Got returns")
     mu, cov = compute_mu_cov(returns, tickers)
-    print("Got mu and cov")
     qubo = build_qubo(mu, cov, risk_tolerance, k, tickers)
-    print("Got qubo")
     selected_vec, selected_assets = solve_qubo_with_qaoa(qubo, tickers, reps=2, maxiter=150)
-    print("Got selected vec and assets")
 
     results = unified_portfolio_analysis(
         selection_vec=selected_vec,
@@ -215,15 +196,14 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
         alpha=ALPHA,
         seed=SEED
     )
-    print("Got results")
     weights = results['portfolio_config']['weights']
     table_data = create_table_values(weights, investment_amount, investment_horizon, 0.02, results['annualized_stats']['expected_return'], PKL_FILE)
-    print("Got table data")
     port_beta = calculate_portfolio_beta(table_data)
-    print("Got port beta")
 
-    _, sentiment_wide = sentiment_engine.get_latest_sentiment()
+    news, sentiment_wide = sentiment_engine.get_latest_sentiment()
+    print(news['Ticker'].value_counts())
     sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index) 
+    print(sentiment)
 
     return results, table_data, port_beta, sentiment
 
@@ -239,9 +219,7 @@ def monte_carlo_analysis_logic(weights_dict: Dict[str, float], investment_amount
     selected_cov = cov.loc[selected_assets, selected_assets]
     
     annualized_returns = calculate_annual_returns(selected_assets, PKL_FILE)["Annualized Return"]
-    print("Got Anual Returns")
     aligned_returns = annualized_returns.reindex(selected_assets).fillna(0) # Assuming simple series, but calculate_annual_returns returns DF
-    print("Calculating Monto carlo...")
     sim_results = monte_carlo_simulation(
         np.array(list(weights_dict.values())),
         annualized_returns, # passing raw values
@@ -251,5 +229,4 @@ def monte_carlo_analysis_logic(weights_dict: Dict[str, float], investment_amount
         num_simulations=1000,
         percentiles=[5, 25, 50, 75, 95]
     )
-    print("Got Monto")
     return sim_results['visualization']

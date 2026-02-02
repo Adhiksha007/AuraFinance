@@ -38,8 +38,8 @@ def get_market_news(
     Get latest news for specified tickers.
     """
     try:
-        # news_df = fetch_realtime_news(tickers, timeout=timeout, limit=limit)
-        news_df = fetch_realtime_news(tickers)
+        news_df = fetch_realtime_news(tickers, timeout=timeout, limit=limit)
+        # news_df = fetch_realtime_news(tickers)
         if news_df.empty:
             return []
         return news_df.to_dict(orient='records')

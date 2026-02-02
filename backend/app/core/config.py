@@ -23,6 +23,8 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     DATABASE_URI: str = "sqlite:///./sql_app.db" # Default to SQLite for easy local dev, can switch to postgres
+    HF_API_KEY: Union[str, None] = None
+
 
     class Config:
         case_sensitive = True

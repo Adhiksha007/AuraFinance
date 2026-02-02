@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface PortfolioState {
     // Inputs
@@ -20,31 +21,45 @@ interface PortfolioState {
     reset: () => void;
 }
 
-export const usePortfolioStore = create<PortfolioState>((set) => ({
-    // Default Inputs
-    risk: [0.5],
-    amount: 10000,
-    horizon: 10,
-    assets: 5,
+export const usePortfolioStore = create<PortfolioState>()(
+    persist(
+        (set) => ({
+            // Default Inputs
+            risk: [0.5],
+            amount: 10000,
+            horizon: 10,
+            assets: 5,
 
-    // Default Results
-    result: null,
-    tableData: [],
-    beta: null,
-    mcData: null,
-    sentiment: null,
+            // Default Results
+            result: null,
+            tableData: [],
+            beta: null,
+            mcData: null,
+            sentiment: null,
 
-    setInputs: (inputs) => set((state) => ({ ...state, ...inputs })),
-    setResults: (results) => set((state) => ({ ...state, ...results })),
-    reset: () => set({
-        // Reset only results, keep inputs or reset all? 
-        // User said "clear the recommendation", usually implies creating a fresh state.
-        // We'll reset results but keep default inputs or current inputs?
-        // Let's reset results only to allow re-running easily.
-        result: null,
-        tableData: [],
-        beta: null,
-        mcData: null,
-        sentiment: null
-    })
-}));
+            setInputs: (inputs) => set((state) => ({ ...state, ...inputs })),
+            setResults: (results) => set((state) => ({ ...state, ...results })),
+            reset: () => set({
+                result: null,
+                tableData: [],
+                beta: null,
+                mcData: null,
+                sentiment: null
+            })
+        }),
+        {
+            name: 'portfolio-storage', // unique name
+            partialize: (state) => ({
+                risk: state.risk,
+                amount: state.amount,
+                horizon: state.horizon,
+                assets: state.assets,
+                result: state.result,
+                tableData: state.tableData,
+                beta: state.beta,
+                mcData: state.mcData,
+                sentiment: state.sentiment
+            }), // explicit whitelist
+        }
+    )
+);

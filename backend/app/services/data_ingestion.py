@@ -5,7 +5,7 @@ import concurrent.futures
 import numpy as np
 import joblib
 from typing import List, Dict, Any, Optional
-# from app.services.sentiment import sentiment_engine
+from app.services.sentiment import sentiment_engine
 
 def get_historical_data(ticker: str, period: str="1mo", interval: str='1d') -> pd.DataFrame:
     stock = yf.Ticker(ticker)
@@ -44,7 +44,7 @@ def calculate_annual_returns(assets, pkl_file):
     """
     # Load cached data
     data = joblib.load(pkl_file)
-    print(assets)
+    
     # Collect closing prices
     prices = pd.DataFrame()
     for ticker in assets:
@@ -162,69 +162,16 @@ def calculate_portfolio_beta(df_values: pd.DataFrame) -> Optional[float]:
 
     return total_beta / total_weight if total_weight > 0 else None
 
-def _fetch_single_ticker_news(ticker: str) -> List[Dict[str, Any]]:
+
+def fetch_realtime_news(tickers: List[str], timeout:int=1, limit:int=10) -> pd.DataFrame:
     """
-    Helper function to fetch news for a single ticker.
+    Pulls news for multiple tickers in parallel and returns a cleaned pandas DataFrame.
     """
-    news_items = []
-    try:
-        stock = yf.Ticker(ticker)
-        raw_news = stock.news
-        
-        for item in raw_news:
-            content = item.get('content', {})
-            
-            raw_date = content.get("pubDate") 
-            clean_date = "N/A"
-            if raw_date:
-                try:
-                    dt = datetime.strptime(raw_date, '%Y-%m-%dT%H:%M:%SZ')
-                    clean_date = dt.strftime('%b %d, %Y')
-                except:
-                    clean_date = raw_date # Fallback to raw if format differs
-
-            news_items.append({
-                "Ticker": ticker,
-                "Date": clean_date,
-                "Title": content.get("title"),
-                "Summary": content.get("summary"),
-                "Link": content.get("canonicalUrl", {}).get("url")
-            })
-    except Exception as e:
-        print(f"Error fetching news for {ticker}: {e}")
-    
-    return news_items
-
-def fetch_realtime_news(tickers: List[str], max_workers: int = 10) -> pd.DataFrame:
-    
-    all_news = []
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_ticker = {executor.submit(_fetch_single_ticker_news, ticker): ticker for ticker in tickers}
-        
-        for future in concurrent.futures.as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            try:
-                data = future.result()
-                if data:
-                    all_news.extend(data)
-                    print(f"✅ Processed {ticker}")
-                else:
-                    print(f"⚠️ No data for {ticker}")
-            except Exception as e:
-                print(f"❌ {ticker} generated an exception: {e}")
-
-    return pd.DataFrame(all_news)
-
-# def fetch_realtime_news(tickers: List[str], timeout:int=1, limit:int=10) -> pd.DataFrame:
-#     """
-#     Pulls news for multiple tickers in parallel and returns a cleaned pandas DataFrame.
-#     """
-#     df = sentiment_engine.get_news(tickers, timeout=timeout, limit=limit)
-#     if not df.empty:
-#         df['Date'] = pd.to_datetime(df["Published"], errors='coerce') # Handle parsing for sorting
-#         df['Date'] = df['Date'].dt.strftime('%b %d, %Y') # Format back to string
-#     return df
+    df = sentiment_engine.get_news(tickers, timeout=timeout, limit=limit)
+    if not df.empty:
+        df['Date'] = pd.to_datetime(df["Published"], errors='coerce') # Handle parsing for sorting
+        df['Date'] = df['Date'].dt.strftime('%b %d, %Y') # Format back to string
+    return df
 
 def get_ticker_summary(ticker_symbol: str) -> pd.DataFrame:
     """

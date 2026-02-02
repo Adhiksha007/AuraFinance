@@ -16,7 +16,7 @@ class SentimentAnalyzer:
         # Updated URL from api-inference to router as per HF 410 Deprecation Error
         self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
         self.api_token = settings.HF_API_KEY
-        self.headers = {"Authorization": f"Bearer {self.api_token}", "X-Wait-For-Model": "true"} if self.api_token else {}
+        self.headers = {"Authorization": f"Bearer {self.api_token}"} if self.api_token else {}
 
         self.sentiment = None
         self.news_data = None
@@ -51,19 +51,24 @@ class SentimentAnalyzer:
       """Send payloads to HF Inference API with wait-for-model logic."""
       if not inputs: return []
 
-      # Add this to your __init__ or here
-      self.headers["X-Wait-For-Model"] = "true"
-
       try:
+          payload = {
+                "inputs": inputs, 
+                "options": {"wait_for_model": True, "use_cache": True}
+            }
           # Increase timeout to 60s to allow for model loading/processing
           response = requests.post(
               self.api_url,
               headers=self.headers,
-              json={"inputs": inputs, "options": {"wait_for_model": True}},
+              json=payload,
               timeout=90
           )
 
           # Handle the case where the model is still spinning up
+          if response.status_code == 402:
+                print("❌ Credit limit reached on the Router. Ensure you aren't using router.huggingface.co")
+                return []
+
           if response.status_code == 503:
               import time
               print("⏳ Model is loading... waiting 20s before retry.")

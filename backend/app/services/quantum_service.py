@@ -346,7 +346,7 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
     # Calculate cumulative portfolio values using vectorized operations
     # Start with initial investment
     simulation_results = np.zeros((time_horizon, num_simulations))
-    simulation_results[0, :] = portfolio_value
+    simulation_results[0, :] = initial_investment
     
     # Vectorized cumulative product for all simulations at once
     for t in range(1, time_horizon):

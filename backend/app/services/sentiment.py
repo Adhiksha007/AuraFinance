@@ -15,10 +15,10 @@ from app.services.cache_manager import cache
 
 class SentimentAnalyzer:
     def __init__(self, tickers: List[str], model_name: str = "ProsusAI/finbert"):
-        # Use free inference API instead of paid router
+        # Use serverless inference API (new free tier)
         self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
         self.api_token = settings.HF_API_KEY
-        self.headers = {"Authorization": f"Bearer {self.api_token}", "X-Wait-For-Model": "true"} if self.api_token else {}
+        self.headers = {"Authorization": f"Bearer {self.api_token}"} if self.api_token else {}
 
         self.tickers = tickers
 
@@ -44,18 +44,18 @@ class SentimentAnalyzer:
             return []
 
     def _query_hf_api(self, inputs: List[str]) -> List[List[Dict[str, Any]]]:
-        """Send payloads to HF Inference API with wait-for-model logic."""
+        """Send payloads to HF Serverless Inference API."""
         if not inputs: return []
+        
         try:
-            # Increase timeout to 60s to allow for model loading/processing
             response = requests.post(
                 self.api_url,
                 headers=self.headers,
-                json={"inputs": inputs, "options": {"wait_for_model": True}},
-                timeout=90
+                json={"inputs": inputs},
+                timeout=30
             )
 
-            # Handle the case where the model is still spinning up
+            # Handle model loading (503)
             if response.status_code == 503:
                 print("⏳ Model is loading... waiting 20s before retry.")
                 time.sleep(20)

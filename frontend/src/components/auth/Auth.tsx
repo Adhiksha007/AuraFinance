@@ -17,7 +17,7 @@ function GlobalLoader() {
     useEffect(() => {
         const timer = setTimeout(() => {
             setShow(false);
-        }, 2000);
+        }, 3000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -145,7 +145,7 @@ export default function Auth() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.5 }}
                         className="w-full max-w-sm lg:max-w-md bg-card/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-2xl border border-border/50"
                     >
                         <h2 className="text-3xl font-bold text-foreground mb-2">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>

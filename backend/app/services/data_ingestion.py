@@ -5,7 +5,7 @@ import concurrent.futures
 import numpy as np
 import joblib
 from typing import List, Dict, Any, Optional
-from app.services.sentiment import get_news as get_sentiment_news
+from app.services.sentiment import sentiment_engine
 from app.services.cache_manager import cache
 
 def get_historical_data(ticker: str, period: str="1mo", interval: str='1d') -> pd.DataFrame:
@@ -176,7 +176,7 @@ def fetch_realtime_news(tickers: List[str], timeout:int=1, limit:int=10) -> pd.D
     if cached_news is not None:
         return cached_news
     
-    df = get_sentiment_news(tickers, timeout=timeout, limit=limit)
+    df = sentiment_engine.get_news(tickers, timeout=timeout, limit=limit)
     if not df.empty:
         df['Date'] = pd.to_datetime(df["Published"], errors='coerce') # Handle parsing for sorting
         df['Date'] = df['Date'].dt.strftime('%b %d, %Y') # Format back to string

@@ -8,7 +8,7 @@ from qiskit.primitives import Sampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 
-from app.services.sentiment import get_latest_sentiment
+from app.services.sentiment import sentiment_engine
 
 ALPHA = 0.05
 
@@ -21,7 +21,7 @@ def compute_mu_cov(returns: pd.DataFrame, tickers: List[str]) -> Tuple[pd.Series
     mu = returns.mean(axis=0) * 252.0
     cov = returns.cov() * 252.0
     
-    _, sentiment_wide = get_latest_sentiment()
+    _, sentiment_wide = sentiment_engine.get_latest_sentiment()
     s = sentiment_wide.iloc[-1].T.reindex(mu.index) 
 
     mu_adjusted = mu + (ALPHA * s)

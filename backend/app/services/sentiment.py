@@ -222,14 +222,5 @@ class SentimentAnalyzer:
         return pd.DataFrame(), pd.DataFrame()
 
 
-# Helper functions for lazy initialization
-def get_latest_sentiment() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Get latest sentiment data (lazy initialization with tickers)."""
-    analyzer = SentimentAnalyzer(tickers=get_tickers())
-    return analyzer.get_latest_sentiment()
-
-
-def get_news(tickers: List[str], timeout: int, limit: Optional[int] = None) -> pd.DataFrame:
-    """Get news data without sentiment analysis (lazy initialization without tickers)."""
-    analyzer = SentimentAnalyzer(tickers=[])  # No tickers needed for news only
-    return analyzer.get_news(tickers, timeout, limit)
+# Global sentiment engine instance
+sentiment_engine = SentimentAnalyzer(tickers=get_tickers())

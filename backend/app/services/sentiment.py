@@ -1,6 +1,3 @@
-from app.services.tickers import get_tickers
-from app.core.config import settings
-from app.services.cache_manager import cache
 import os
 import datetime
 import numpy as np
@@ -11,21 +8,22 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Dict, Any, Optional
 import random
 import time
+from app.core.config import settings
+from app.services.tickers import get_tickers
+from app.services.cache_manager import cache
+
 
 class SentimentAnalyzer:
     def __init__(self, tickers: List[str], model_name: str = "ProsusAI/finbert"):
         # Updated URL from api-inference to router as per HF 410 Deprecation Error
         self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
         self.api_token = settings.HF_API_KEY
-        self.headers = {"Authorization": f"Bearer {self.api_token}"} if self.api_token else {}
+        self.headers = {"Authorization": f"Bearer {self.api_token}", "X-Wait-For-Model": "true"} if self.api_token else {}
 
         self.tickers = tickers
-        # Removed in-memory cache - now using persistent cache_manager
 
         if not self.api_token:
             print("⚠️ WARNING: HF_API_KEY not found. Sentiment analysis may fail or be rate-limited.")
-
-        # Don't build on init - lazy load when needed
 
     @staticmethod
     def _fetch_single_feed(ticker: str, timeout: int, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -41,85 +39,74 @@ class SentimentAnalyzer:
                     "Link": entry.link,
                     "Published": entry.published
                 })
-            return extracted[:limit]
+            return extracted[:limit] if limit else extracted
         except Exception:
             return []
 
     def _query_hf_api(self, inputs: List[str]) -> List[List[Dict[str, Any]]]:
-      """Send payloads to HF Inference API with wait-for-model logic."""
-      if not inputs: return []
+        """Send payloads to HF Inference API with wait-for-model logic."""
+        if not inputs: return []
+        try:
+            # Increase timeout to 60s to allow for model loading/processing
+            response = requests.post(
+                self.api_url,
+                headers=self.headers,
+                json={"inputs": inputs, "options": {"wait_for_model": True}},
+                timeout=90
+            )
 
-      try:
-          payload = {
-                "inputs": inputs, 
-                "options": {"wait_for_model": True, "use_cache": True}
-            }
-          # Increase timeout to 60s to allow for model loading/processing
-          response = requests.post(
-              self.api_url,
-              headers=self.headers,
-              json=payload,
-              timeout=90
-          )
+            # Handle the case where the model is still spinning up
+            if response.status_code == 503:
+                print("⏳ Model is loading... waiting 20s before retry.")
+                time.sleep(20)
+                return self._query_hf_api(inputs)  # Single retry
 
-          # Handle the case where the model is still spinning up
-          if response.status_code == 402:
-                print("❌ Credit limit reached on the Router. Ensure you aren't using router.huggingface.co")
+            if response.status_code != 200:
+                print(f"❌ HF API Error {response.status_code}: {response.text}")
                 return []
 
-          if response.status_code == 503:
-              import time
-              print("⏳ Model is loading... waiting 20s before retry.")
-              time.sleep(20)
-              return self._query_hf_api(inputs) # Single retry
-
-          if response.status_code != 200:
-              print(f"❌ HF API Error {response.status_code}: {response.text}")
-              return []
-
-          return response.json()
-      except requests.exceptions.Timeout:
-          print("❌ Request timed out. Model might be too busy or chunk size too large.")
-          return []
-      except Exception as e:
-          print(f"❌ HF API Request Failed: {e}")
-          return []
+            return response.json()
+        except requests.exceptions.Timeout:
+            print("❌ Request timed out. Model might be too busy or chunk size too large.")
+            return []
+        except Exception as e:
+            print(f"❌ HF API Request Failed: {e}")
+            return []
 
     def _score_texts(self, texts: List[str]) -> pd.DataFrame:
-        """Process sentiment with parallel execution (no batching due to API limitations)."""
+        """Process sentiment and return a DataFrame with Score, Label, and Value."""
         if not texts: return pd.DataFrame()
 
+        # We now pre-fill a list of dictionaries instead of a numpy array
         results = [None] * len(texts)
 
         def process_single(idx, text):
-            # No random delay - just process
+            time.sleep(random.uniform(0.1, 0.5))
             response = self._query_hf_api([text])
 
             if response and isinstance(response, list) and len(response) > 0:
                 item = response[0]
                 if isinstance(item, list):
-                    try:
-                        score_map = {res['label'].lower(): res['score'] for res in item}
+                    # Sort scores to find the highest confidence label
+                    # Example: [{'label': 'positive', 'score': 0.9}, {'label': 'neutral', 'score': 0.1}]
+                    score_map = {res['label'].lower(): res['score'] for res in item}
 
-                        # Standard Score (Pos - Neg)
-                        pos = score_map.get('positive', 0.0)
-                        neg = score_map.get('negative', 0.0)
-                        net_score = pos - neg
+                    # 1. Standard Score (Pos - Neg)
+                    pos = score_map.get('positive', 0.0)
+                    neg = score_map.get('negative', 0.0)
+                    net_score = pos - neg
 
-                        # Get the winning label
-                        winning_item = max(item, key=lambda x: x['score'])
-                        label = winning_item['label'].capitalize()
-                        confidence = winning_item['score']
+                    # 2. Get the winning label and its value
+                    winning_item = max(item, key=lambda x: x['score'])
+                    label = winning_item['label'].capitalize()
+                    confidence = winning_item['score']
 
-                        return idx, {"Sentiment": net_score, "Label": label, "Confidence": confidence}
-                    except (KeyError, TypeError, ValueError):
-                        return idx, {"Sentiment": 0.0, "Label": "Neutral", "Confidence": 0.0}
+                    return idx, {"Sentiment": net_score, "Label": label, "Confidence": confidence}
 
             # Fallback for failures
             return idx, {"Sentiment": 0.0, "Label": "Neutral", "Confidence": 0.0}
 
-        # Parallel processing with more workers (no random delays)
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             future_to_idx = {executor.submit(process_single, i, t): i for i, t in enumerate(texts)}
             for future in as_completed(future_to_idx):
                 idx, data = future.result()
@@ -127,16 +114,15 @@ class SentimentAnalyzer:
 
         return pd.DataFrame(results)
 
-    def get_news(self, tickers: List[str], timeout: int, limit: Optional[int] = None) ->pd.DataFrame:
-        # Concurrent fetching with optimized thread pool
+    def get_news(self, tickers: List[str], timeout: int, limit: Optional[int] = None) -> pd.DataFrame:
+        # 1. Concurrent Fetching
         all_news_items = []
-        max_workers = min(10, len(tickers))  # Reduced from 32 for free tier
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ThreadPoolExecutor(max_workers=min(32, len(tickers) * 2 + 4)) as executor:
             futures = [executor.submit(self._fetch_single_feed, t, timeout=timeout, limit=limit) for t in tickers]
             for future in as_completed(futures):
                 all_news_items.extend(future.result())
 
+        # 2. Convert directly to DataFrame
         if not all_news_items:
             return pd.DataFrame()
 
@@ -158,7 +144,7 @@ class SentimentAnalyzer:
         cached_data = cache.get(cache_key)
         if cached_data is not None:
             print("✅ Using cached sentiment data")
-            return  # Data already cached, no need to rebuild
+            return  # Data already in cache
 
         df = self.get_news(tickers, timeout=12, limit=None)
 
@@ -167,18 +153,18 @@ class SentimentAnalyzer:
             cache.set(cache_key, (pd.DataFrame(), pd.DataFrame()), ttl_seconds=3600)
             return
 
-        # Quick warmup without excessive wait
-        print("🔥 Initializing sentiment model...")
-        self._query_hf_api(["Warmup"])
-        time.sleep(3)  # Reduced from 15s to 3s
+        print("🔥 Waking up the model... please wait.")
+        self._query_hf_api(["Just warming up the engine."])
+        time.sleep(10)
 
-        # Batch Scoring (now optimized with batching)
+        # 3. Batch Scoring
+        # Get the new sentiment details (Sentiment, Label, Confidence)
         sentiment_df = self._score_texts(df["Title"].tolist())
 
-        # Merge sentiment columns
+        # Merge these new columns into our main news_data DataFrame
         df = pd.concat([df.reset_index(drop=True), sentiment_df], axis=1)
 
-        # Data Cleaning & Aggregation
+        # 4. Data Cleaning & Aggregation
         df["Date"] = df["Published"].dt.date
 
         # Calculate Daily Sentiment
@@ -188,12 +174,13 @@ class SentimentAnalyzer:
             .reset_index()
         )
 
-        # Pivot to wide format
+        # Pivot to wide format (Dates as Index, Tickers as Columns)
         sentiment_wide = df_daily.pivot(index='Date', columns='Ticker', values='Sentiment')
         news_data = df
         
         # Cache for 1 hour
         cache.set(cache_key, (news_data, sentiment_wide), ttl_seconds=3600)
+        print("✅ Sentiment data cached for 1 hour")
 
     def get_latest_sentiment(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """

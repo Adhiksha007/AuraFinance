@@ -11,25 +11,6 @@ interface FrontendPayload {
     simple_summary: string;
 }
 
-interface SummaryCard {
-    label: string;
-    region: string;
-    status: string;
-    indicator: string;
-    description: string;
-}
-
-interface Signal {
-    index: string;
-    price: number;
-    sma_50: number;
-    health_score?: number;
-    summary_card?: SummaryCard;
-    // Legacy fields for fallback
-    signal_label?: string;
-    frontend_payload?: FrontendPayload;
-}
-
 interface Alert {
     ticker: string;
     name: string;
@@ -73,7 +54,7 @@ interface MarketData {
         current_price: number;
         frontend_payload?: FrontendPayload;
     }[];
-    signals?: Signal[];
+
     alerts?: Alert[];
     market_status?: {
         "New York": string;
@@ -177,7 +158,7 @@ const MarketTrends = () => {
     const sentiment = data?.sentiment || { score: 50, status: 'Neutral', vix: 0 };
     const sectors = data?.sectors || [];
     const indiaSectors = data?.india_sectors || [];
-    const signals = data?.signals || [];
+
     const alerts = data?.alerts || [];
     const marketStatus = data?.market_status || { "New York": "CLOSED", "London": "CLOSED", "Tokyo": "CLOSED", "global_is_open": false };
 
@@ -437,66 +418,6 @@ const MarketTrends = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Smart Momentum Signals */}
-            {signals.length > 0 && (
-                <div className="mb-8">
-                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-indigo-500" />
-                        Smart Momentum Signals
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {signals.map((signal) => (
-                            <div
-                                key={signal.index}
-                                className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 group"
-                            >
-                                <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50 transition-opacity group-hover:opacity-10">
-                                    {signal.health_score}
-                                </div>
-                                <div className="relative z-10">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="bg-secondary/40 p-1.5 rounded-lg">
-                                            <h4 className="font-bold text-lg leading-none">{signal.summary_card?.label || signal.index}</h4>
-                                        </div>
-                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${signal.summary_card?.status === 'OPEN' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                                            {signal.summary_card?.status || (marketStatus?.global_is_open ? 'OPEN' : 'CLOSED')}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-baseline gap-2 mb-4">
-                                        <span className="text-3xl font-bold tracking-tight">${signal.price.toLocaleString()}</span>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div>
-                                            <div className="flex justify-between text-xs mb-1.5 font-medium text-muted-foreground">
-                                                <span>Health Score</span>
-                                                <span className={`${(signal.health_score || 0) >= 7 ? 'text-primary' : 'text-foreground'}`}>{signal.health_score || 5}/10</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-500 ${(signal.health_score || 5) >= 8 ? 'bg-primary' : (signal.health_score || 5) >= 5 ? 'bg-yellow-500' : 'bg-destructive'}`}
-                                                    style={{ width: `${(signal.health_score || 5) * 10}%` }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="p-3 bg-secondary/30 rounded-xl border border-secondary group-hover:bg-secondary/50 transition-colors">
-                                            <p className="font-bold text-sm mb-0.5 flex items-center gap-1.5">
-                                                {signal.summary_card?.indicator || signal.signal_label}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
-                                                {signal.summary_card?.description || signal.frontend_payload?.simple_summary || 'Analyzing trend...'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* Sector Section (Global + India) */}
             <div className="space-y-8 mb-6">

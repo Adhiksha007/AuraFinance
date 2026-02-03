@@ -112,6 +112,9 @@ export default function StockPicks() {
                         {picks.map((pick) => (
                             <motion.div
                                 layout
+                                initial={{ opacity: 0, y: 50 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5, ease: "easeInOut" }}
                                 key={pick.symbol}
                                 onClick={() => setSelectedId(selectedId === pick.symbol ? null : pick.symbol)}

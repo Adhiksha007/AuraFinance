@@ -75,10 +75,10 @@ export default function Watchlist() {
                         <motion.div
                             key={item.ticker}
                             layout
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ delay: idx * 0.1 }}
+                            initial={{ opacity: 0, y: 50 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
                             whileHover={{ y: -5 }}
                             onClick={() => navigate(`/?ticker=${item.ticker}`)}
                             className="bg-card border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative group cursor-pointer hover:bg-accent/40"

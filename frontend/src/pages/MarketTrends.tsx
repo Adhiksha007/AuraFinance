@@ -89,7 +89,7 @@ const containerVariants: Variants = {
     show: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1
+            staggerChildren: 0.15
         }
     }
 };
@@ -504,6 +504,7 @@ const MarketTrends = () => {
                 <div>
                     <h3 className="text-xl font-bold mb-4">Global Sector Performance</h3>
                     <motion.div
+                        key={`global-sectors-${sectors.length}`}
                         variants={containerVariants}
                         initial="hidden"
                         whileInView="show"
@@ -539,6 +540,7 @@ const MarketTrends = () => {
                         <span className="text-orange-500">🇮🇳</span> India Sector Performance
                     </h3>
                     <motion.div
+                        key={`india-sectors-${indiaSectors.length}`}
                         variants={containerVariants}
                         initial="hidden"
                         whileInView="show"

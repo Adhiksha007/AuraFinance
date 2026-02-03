@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, Zap, AlertTriangle, X, Clock, Globe, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
 import apiClient from '../api/apiClient';
@@ -83,6 +83,21 @@ interface MarketData {
     };
     timestamp: number;
 }
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+};
 
 const MarketTrends = () => {
     const [data, setData] = useState<MarketData | null>(null);
@@ -431,7 +446,7 @@ const MarketTrends = () => {
                         Smart Momentum Signals
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {signals.map((signal, _) => (
+                        {signals.map((signal) => (
                             <div
                                 key={signal.index}
                                 className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 group"
@@ -488,14 +503,17 @@ const MarketTrends = () => {
                 {/* Global Sectors */}
                 <div>
                     <h3 className="text-xl font-bold mb-4">Global Sector Performance</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {sectors.map((sector, _) => (
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    >
+                        {sectors.map((sector) => (
                             <motion.div
                                 key={sector.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                variants={itemVariants}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
                             >
                                 <div className="flex flex-col">
@@ -512,7 +530,7 @@ const MarketTrends = () => {
                                 </div>
                             </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 </div>
 
                 {/* Indian Sectors */}
@@ -520,14 +538,17 @@ const MarketTrends = () => {
                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <span className="text-orange-500">🇮🇳</span> India Sector Performance
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {indiaSectors.map((sector, _) => (
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true, margin: "-50px" }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    >
+                        {indiaSectors.map((sector) => (
                             <motion.div
                                 key={sector.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                variants={itemVariants}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
                             >
                                 <div className="flex flex-col">
@@ -543,7 +564,7 @@ const MarketTrends = () => {
                                 </div>
                             </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                     {indiaSectors.length === 0 && (
                         <div className="p-12 bg-card rounded-2xl border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground opacity-70">
                             <Activity className="w-8 h-8 mb-2" />
@@ -551,9 +572,9 @@ const MarketTrends = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
-        </div>
+        </div >
     );
 };
 

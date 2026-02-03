@@ -439,7 +439,7 @@ const MarketTrends = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                                whileHover={{ y: -5, scale: 1.02 }}
                                 className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all group"
                             >
                                 <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50 transition-opacity group-hover:opacity-10">
@@ -501,11 +501,8 @@ const MarketTrends = () => {
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5 }}
-                                whileHover={{
-                                    scale: 1.02,
-                                    transition: { duration: 0.2 }
-                                }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                whileHover={{ scale: 1.02, y: -5 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">
@@ -538,10 +535,7 @@ const MarketTrends = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{
-                                    scale: 1.02,
-                                    transition: { duration: 0.2 }
-                                }}
+                                whileHover={{ scale: 1.02, y: -5 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">

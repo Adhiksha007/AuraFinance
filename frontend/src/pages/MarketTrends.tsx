@@ -495,13 +495,13 @@ const MarketTrends = () => {
                 <div>
                     <h3 className="text-xl font-bold mb-4">Global Sector Performance</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {sectors.map((sector, idx) => (
+                        {sectors.map((sector, _idx) => (
                             <motion.div
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
+                                transition={{ duration: 0.5 }}
                                 whileHover={{ scale: 1.02 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
@@ -528,13 +528,13 @@ const MarketTrends = () => {
                         <span className="text-orange-500">🇮🇳</span> India Sector Performance
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {indiaSectors.map((sector, idx) => (
+                        {indiaSectors.map((sector, _idx) => (
                             <motion.div
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
+                                transition={{ duration: 0.5 }}
                                 whileHover={{ scale: 1.02 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >

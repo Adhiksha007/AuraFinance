@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, Zap, AlertTriangle, X, Clock, Globe, TrendingUp, TrendingDown, ChevronDown } from 'lucide-react';
@@ -92,7 +92,7 @@ const MarketTrends = () => {
     const [showAlerts, setShowAlerts] = useState(true);
     const [selectedIndex, setSelectedIndex] = useState("S&P 500");
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const response = await apiClient.get<MarketData>('/market-trends/');
             setData(response.data);
@@ -105,13 +105,13 @@ const MarketTrends = () => {
             setConnected(false);
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchData]);
 
     if (loading && !data) {
         return (
@@ -432,13 +432,13 @@ const MarketTrends = () => {
                         Smart Momentum Signals
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {signals.map((signal, idx) => (
+                        {signals.map((signal, _) => (
                             <motion.div
                                 key={signal.index}
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, delay: (idx % 4) * 0.1 }}
+                                transition={{ duration: 0.5 }}
                                 whileHover={{ y: -5, transition: { duration: 0.2 } }}
                                 className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all group"
                             >
@@ -495,14 +495,17 @@ const MarketTrends = () => {
                 <div>
                     <h3 className="text-xl font-bold mb-4">Global Sector Performance</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {sectors.map((sector, _idx) => (
+                        {sectors.map((sector, _) => (
                             <motion.div
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{ scale: 1.02 }}
+                                whileHover={{
+                                    scale: 1.02,
+                                    transition: { duration: 0.2 }
+                                }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">
@@ -528,14 +531,17 @@ const MarketTrends = () => {
                         <span className="text-orange-500">🇮🇳</span> India Sector Performance
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {indiaSectors.map((sector, _idx) => (
+                        {indiaSectors.map((sector, _) => (
                             <motion.div
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 50 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{ scale: 1.02 }}
+                                whileHover={{
+                                    scale: 1.02,
+                                    transition: { duration: 0.2 }
+                                }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">

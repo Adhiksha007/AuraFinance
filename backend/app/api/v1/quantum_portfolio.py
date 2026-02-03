@@ -195,6 +195,8 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
     )
     weights = results['portfolio_config']['weights']
     table_data = create_table_values(weights, investment_amount, investment_horizon, 0.02, results['annualized_stats']['expected_return'], PKL_FILE)
+    port_beta = calculate_portfolio_beta(table_data)
+    
     # Sentiment data is now cached internally in sentiment.py
     news, sentiment_wide = sentiment_engine.get_latest_sentiment()
     sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index)

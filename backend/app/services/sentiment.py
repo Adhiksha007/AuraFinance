@@ -15,8 +15,8 @@ from app.services.cache_manager import cache
 
 class SentimentAnalyzer:
     def __init__(self, tickers: List[str], model_name: str = "ProsusAI/finbert"):
-        # Updated URL from api-inference to router as per HF 410 Deprecation Error
-        self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
+        # Use free inference API instead of paid router
+        self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
         self.api_token = settings.HF_API_KEY
         self.headers = {"Authorization": f"Bearer {self.api_token}", "X-Wait-For-Model": "true"} if self.api_token else {}
 

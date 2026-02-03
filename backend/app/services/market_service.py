@@ -94,7 +94,6 @@ class MarketService:
         if key in self._cache:
             item = self._cache[key]
             if time.time() < item['expires']:
-                print(f"✅ Serving {key} from cache")
                 return item['data']
         return None
 
@@ -189,6 +188,11 @@ class MarketService:
                 
                 # --- Technical Analysis ---
                 history = raw_df[ticker].dropna()
+                
+                # SAFETY CHECK: We need at least 50 points for SMA and 2 points for price change
+                if len(history) < 50: 
+                    continue
+
                 sma50 = history.rolling(window=50).mean().iloc[-1]
                 current_price = float(history.iloc[-1])
                 old_price = float(history.iloc[-2])
@@ -199,6 +203,11 @@ class MarketService:
 
                 # --- Chart Processing ---
                 series = intraday_df[ticker].dropna()
+                if series.empty:
+                    series = history[-50:] # Fallback to daily data if intraday missing
+                
+                if series.empty: continue
+
                 start_price = float(series.iloc[0])
 
                 change_pct = ((current_price - old_price) / old_price) * 100

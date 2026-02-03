@@ -52,7 +52,12 @@ export default function Watchlist() {
     if (loading) return <div className="p-12 text-center text-muted-foreground">Loading Watchlist...</div>;
 
     return (
-        <div className="space-y-8">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+        >
             <header>
                 <h1 className="text-3xl font-bold text-foreground">Your Watchlist</h1>
                 <p className="text-muted-foreground mt-2">Track your favorite stocks.</p>
@@ -107,6 +112,6 @@ export default function Watchlist() {
                     ))}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 }

@@ -52,10 +52,20 @@ export default function Portfolio() {
     // Effect to handle restoration sequence
     useEffect(() => {
         if (result && isRestoring) {
-            // Instant restore without animation delay if data is already there
-            setLoadingStep('complete');
-            setChartsReady(true); // Render charts immediately
-            setIsRestoring(false);
+            setLoadingStep('restoring');
+
+            // 1. Defer heavy chart rendering slightly to let the tab transition finish smoothly
+            const chartTimer = setTimeout(() => {
+                setChartsReady(true);
+            }, 100);
+
+            // 2. Keep "Restoring" loader briefly to mask the chart render jank
+            const finishTimer = setTimeout(() => {
+                setLoadingStep('complete');
+                setIsRestoring(false);
+            }, 800); // 0.8s allows the user to see "Restoring..." and feels "computational" but fast
+
+            return () => { clearTimeout(chartTimer); clearTimeout(finishTimer); };
         } else if (!result) {
             setIsRestoring(false);
             setLoadingStep('idle');

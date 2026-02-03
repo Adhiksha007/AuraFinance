@@ -170,6 +170,7 @@ const MarketTrends = () => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0, transitionEnd: { transform: "none" } }}
+            transition={{ duration: 0.5 }}
             className="p-8 min-h-screen bg-background text-foreground font-sans"
         >
             <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">

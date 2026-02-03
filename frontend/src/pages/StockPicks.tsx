@@ -62,7 +62,12 @@ export default function StockPicks() {
     }
 
     return (
-        <div className="min-h-screen py-8 px-4 relative overflow-hidden bg-background">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="min-h-screen py-8 px-4 relative overflow-hidden bg-background"
+        >
             <div className="max-w-7xl mx-auto space-y-12">
                 <header className="relative z-10">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -328,6 +333,6 @@ export default function StockPicks() {
                     </div>
                 </LayoutGroup>
             </div>
-        </div>
+        </motion.div>
     );
 }

@@ -48,7 +48,7 @@ export default function News() {
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-50px" }}
-                        transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
+                        transition={{ duration: 0.5 }}
                         className="block bg-card p-6 rounded-2xl shadow-sm border border-border/50 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:bg-accent/40"
                     >
                         <div className="flex justify-between items-start mb-4">

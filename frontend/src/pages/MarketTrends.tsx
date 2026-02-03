@@ -291,7 +291,7 @@ const MarketTrends = () => {
                                         >
                                             <defs>
                                                 <linearGradient id={`gradient-${selectedData.color}`} x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={selectedData.color} stopOpacity={0.2} />
+                                                    <stop offset="5%" stopColor={selectedData.color} stopOpacity={0.4} />
                                                     <stop offset="95%" stopColor={selectedData.color} stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
@@ -309,15 +309,16 @@ const MarketTrends = () => {
                                             <Tooltip
                                                 cursor={{ stroke: selectedData.color, strokeWidth: 1, strokeDasharray: '4 4' }}
                                                 contentStyle={{
-                                                    borderRadius: '12px',
-                                                    border: 'none',
-                                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                                                    backgroundColor: 'hsl(var(--popover))',
-                                                    color: 'hsl(var(--popover-foreground))'
+                                                    borderRadius: '16px',
+                                                    border: '1px solid hsl(var(--border))',
+                                                    boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.2)',
+                                                    backgroundColor: 'hsl(var(--background))',
+                                                    color: 'hsl(var(--foreground))',
+                                                    padding: '12px'
                                                 }}
                                                 itemStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                                                 formatter={(_value: any, _name: any, props: any) => [`$${props.payload.price}`, 'Price']}
-                                                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                                                labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
                                             />
                                             <Area
                                                 type="monotone"
@@ -333,32 +334,32 @@ const MarketTrends = () => {
 
                                 {/* Detailed Technical Data Section (Below Chart) */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-border/50">
-                                    <div className="bg-muted/30 p-3 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-1">Trend Signal</p>
-                                        <p className={`font-bold flex items-center gap-1 ${selectedData.technical?.signal === 'Bullish' ? 'text-green-500' : 'text-red-500'}`}>
+                                    <div className="bg-secondary/30 p-4 rounded-2xl border border-secondary">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Trend Signal</p>
+                                        <p className={`font-bold flex items-center gap-1.5 ${selectedData.technical?.signal === 'Bullish' ? 'text-green-500' : 'text-red-500'}`}>
                                             {selectedData.indicator} {selectedData.technical?.signal || 'N/A'}
                                         </p>
                                     </div>
-                                    <div className="bg-muted/30 p-3 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-1">50-Day SMA</p>
+                                    <div className="bg-secondary/30 p-4 rounded-2xl border border-secondary">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">50-Day SMA</p>
                                         <p className="font-bold text-foreground">
                                             {selectedData.technical?.sma50?.toLocaleString() || 'N/A'}
                                         </p>
                                     </div>
-                                    <div className="bg-muted/30 p-3 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-1">Health Score</p>
+                                    <div className="bg-secondary/30 p-4 rounded-2xl border border-secondary">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Health Score</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                            <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                                                 <div
-                                                    className={`h-full rounded-full ${selectedData.technical?.health_score >= 8 ? 'bg-green-500' : selectedData.technical?.health_score >= 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                    className={`h-full rounded-full transition-all duration-500 ${selectedData.technical?.health_score >= 8 ? 'bg-green-500' : selectedData.technical?.health_score >= 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                                     style={{ width: `${(selectedData.technical?.health_score || 0) * 10}%` }}
                                                 />
                                             </div>
                                             <span className="font-bold text-sm">{selectedData.technical?.health_score}/10</span>
                                         </div>
                                     </div>
-                                    <div className="bg-muted/30 p-3 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-1">Region</p>
+                                    <div className="bg-secondary/30 p-4 rounded-2xl border border-secondary">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Region</p>
                                         <p className="font-bold text-foreground truncate">{selectedData.region}</p>
                                     </div>
                                 </div>
@@ -373,7 +374,7 @@ const MarketTrends = () => {
                 </div>
 
                 {/* Sentiment Gauge (Right Column) */}
-                <div className="bg-card rounded-2xl p-6 shadow-sm border border-border flex flex-col items-center justify-center relative">
+                <div className="bg-card rounded-3xl p-6 shadow-sm border border-border flex flex-col items-center justify-center relative bg-gradient-to-b from-card to-secondary/10">
                     <h3 className="font-semibold text-lg absolute top-6 left-6 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-yellow-500" />
                         Market Mood
@@ -408,7 +409,7 @@ const MarketTrends = () => {
                             key={sentiment.score}
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="text-4xl font-bold"
+                            className="text-5xl font-extrabold tracking-tighter"
                             style={{ color: sentiment.frontend_payload?.color_code }}
                         >
                             {sentiment.score}
@@ -416,7 +417,7 @@ const MarketTrends = () => {
                         <p className="text-lg font-bold flex items-center justify-center gap-2" style={{ color: sentiment.frontend_payload?.color_code }}>
                             {sentiment.frontend_payload?.icon} {sentiment.status}
                         </p>
-                        <p className="text-xs text-muted-foreground max-w-[200px] mx-auto px-4 py-2 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground max-w-[200px] mx-auto px-4 py-2 bg-secondary/50 rounded-lg">
                             {sentiment.frontend_payload?.simple_summary || `VIX: ${sentiment.vix}`}
                         </p>
                     </div>
@@ -438,50 +439,48 @@ const MarketTrends = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5, delay: (idx % 4) * 0.1 }}
-                                whileHover={{ y: -3 }}
-                                className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between"
+                                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                                className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all group"
                             >
-                                <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50">
+                                <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50 transition-opacity group-hover:opacity-10">
                                     {signal.health_score}
                                 </div>
                                 <div className="relative z-10">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h4 className="font-bold text-lg">{signal.summary_card?.label || signal.index}</h4>
-                                            <p className="text-xs text-muted-foreground/80 flex items-center gap-1">
-                                                <Globe className="w-3 h-3" /> {signal.summary_card?.region || 'Global'}
-                                            </p>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div className="bg-secondary/40 p-1.5 rounded-lg">
+                                            <h4 className="font-bold text-lg leading-none">{signal.summary_card?.label || signal.index}</h4>
                                         </div>
                                         <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${signal.summary_card?.status === 'OPEN' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                                             {signal.summary_card?.status || (marketStatus?.global_is_open ? 'OPEN' : 'CLOSED')}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-baseline gap-2 mb-3">
-                                        <span className="text-2xl font-bold">{signal.price.toLocaleString()}</span>
-                                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${signal.price > signal.sma_50 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
-                                            vs SMA: {signal.sma_50.toLocaleString()}
-                                        </span>
+                                    <div className="flex items-baseline gap-2 mb-4">
+                                        <span className="text-3xl font-bold tracking-tight">${signal.price.toLocaleString()}</span>
                                     </div>
 
-                                    <div className="mb-3">
-                                        <div className="flex justify-between text-xs mb-1 text-muted-foreground">
-                                            <span>Health Score</span>
-                                            <span className="font-bold">{signal.health_score || 5}/10</span>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1.5 font-medium text-muted-foreground">
+                                                <span>Health Score</span>
+                                                <span className={`${(signal.health_score || 0) >= 7 ? 'text-primary' : 'text-foreground'}`}>{signal.health_score || 5}/10</span>
+                                            </div>
+                                            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${(signal.health_score || 5) >= 8 ? 'bg-primary' : (signal.health_score || 5) >= 5 ? 'bg-yellow-500' : 'bg-destructive'}`}
+                                                    style={{ width: `${(signal.health_score || 5) * 10}%` }}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full ${(signal.health_score || 5) >= 8 ? 'bg-primary' : (signal.health_score || 5) >= 5 ? 'bg-yellow-500' : 'bg-destructive'}`}
-                                                style={{ width: `${(signal.health_score || 5) * 10}%` }}
-                                            />
-                                        </div>
-                                    </div>
 
-                                    <div className="p-3 bg-muted/30 rounded-xl border border-border/50">
-                                        <p className="font-bold text-sm mb-0.5">{signal.summary_card?.indicator || signal.signal_label}</p>
-                                        <p className="text-xs text-muted-foreground leading-tight">
-                                            {signal.summary_card?.description || signal.frontend_payload?.simple_summary || 'Analyzing trend...'}
-                                        </p>
+                                        <div className="p-3 bg-secondary/30 rounded-xl border border-secondary group-hover:bg-secondary/50 transition-colors">
+                                            <p className="font-bold text-sm mb-0.5 flex items-center gap-1.5">
+                                                {signal.summary_card?.indicator || signal.signal_label}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
+                                                {signal.summary_card?.description || signal.frontend_payload?.simple_summary || 'Analyzing trend...'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -503,28 +502,19 @@ const MarketTrends = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
-                                whileHover={{ y: -3 }}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between"
+                                whileHover={{ scale: 1.02 }}
+                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-bold text-lg truncate max-w-[150px]">{sector.name}</h4>
+                                        <h4 className="font-bold text-lg truncate max-w-[180px] text-foreground">{sector.name}</h4>
                                     </div>
-                                    <span className="text-[15px] text-muted-foreground">{sector.ticker}</span>
-                                    <p className="text-[10px] text-muted-foreground max-w-[150px] leading-tight mt-1">
-                                        {sector.frontend_payload?.simple_summary}
-                                    </p>
+                                    <span className="text-[11px] font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded w-fit">{sector.ticker}</span>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
-                                    <div className={`font-bold text-lg ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
-                                        {sector.change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                    <div className={`font-bold text-xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                                        {sector.change >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                                         {Math.abs(sector.change)}%
-                                    </div>
-                                    <div className={`w-12 h-1 rounded-full mt-2 ${sector.change >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                                        <div
-                                            className={`h-full rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                                            style={{ width: `${Math.min(Math.abs(sector.change) * 10, 100)}%` }}
-                                        />
                                     </div>
                                 </div>
                             </motion.div>
@@ -545,24 +535,18 @@ const MarketTrends = () => {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
                                 transition={{ duration: 0.5, delay: (idx % 3) * 0.1 }}
-                                whileHover={{ y: -3 }}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between"
+                                whileHover={{ scale: 1.02 }}
+                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">
-                                    <h4 className="font-bold text-lg truncate max-w-[150px]">{sector.name}</h4>
-                                    <span className="text-[10px] text-muted-foreground">{sector.ticker}</span>
-                                    <span className="text-[15px] font-bold text-muted-foreground mt-1">C: ${sector.current_price.toLocaleString()}</span>
+                                    <h4 className="font-bold text-lg truncate max-w-[180px] text-foreground">{sector.name}</h4>
+                                    <span className="text-[11px] font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded w-fit mb-1">{sector.ticker}</span>
+                                    <span className="text-xs font-semibold text-muted-foreground">Price: ₹{sector.current_price.toLocaleString()}</span>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
-                                    <div className={`font-bold text-lg ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
-                                        {sector.change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                    <div className={`font-bold text-xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
+                                        {sector.change >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
                                         {Math.abs(sector.change)}%
-                                    </div>
-                                    <div className={`w-12 h-1 rounded-full mt-2 ${sector.change >= 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                                        <div
-                                            className={`h-full rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                                            style={{ width: `${Math.min(Math.abs(sector.change) * 10, 100)}%` }}
-                                        />
                                     </div>
                                 </div>
                             </motion.div>

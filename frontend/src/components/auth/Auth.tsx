@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { useProgress } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import FinanceScene from './FinanceScene';
@@ -7,7 +8,56 @@ import apiClient from '../../api/apiClient';
 import { useAuthStore } from '../../state/authStore';
 import { useNavigate } from 'react-router-dom';
 
+function GlobalLoader() {
+    const { active, progress } = useProgress();
+    const [show, setShow] = useState(true);
+
+    useEffect(() => {
+        // When invalidation stops and progress is 100, we are ready.
+        // We add a small buffer to ensure visual smoothness.
+        if (!active && progress === 100) {
+            const timer = setTimeout(() => setShow(false), 800);
+            return () => clearTimeout(timer);
+        }
+    }, [active, progress]);
+
+    return (
+        <AnimatePresence>
+            {show && (
+                <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
+                >
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="relative">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+                            <div className="absolute inset-0 flex items-center justify-center font-bold text-xs text-primary">
+                                {Math.round(progress)}%
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                            <h3 className="text-xl font-bold tracking-tight text-foreground">AuraFinance</h3>
+                            <p className="text-sm text-muted-foreground animate-pulse">Initializing 3D Environment...</p>
+                        </div>
+                        <div className="w-64 h-1 bg-secondary rounded-full mt-2 overflow-hidden">
+                            <motion.div
+                                className="h-full bg-primary"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ type: "spring", stiffness: 50 }}
+                            />
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+}
+
 export default function Auth() {
+
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState(''); // New State for Register
@@ -69,6 +119,7 @@ export default function Auth() {
 
     return (
         <div className="flex h-screen w-full bg-background overflow-hidden">
+            <GlobalLoader />
             {/* Left Side - 3D Scene */}
             <div className="hidden min-[650px]:flex w-1/2 relative items-center justify-center bg-muted/5 backdrop-blur-3xl">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-purple-500/10 z-0 dark:from-primary/20 dark:to-purple-500/20" />

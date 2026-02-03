@@ -22,11 +22,11 @@ function GlobalLoader() {
         }
     }, [progress]);
 
-    // Safety: Force close after 6 seconds if stuck (e.g. font network issue)
+    // Safety: Force close after 3 seconds if stuck (e.g. font network issue)
     useEffect(() => {
         const timer = setTimeout(() => {
             setShow(false);
-        }, 6000);
+        }, 3000);
         return () => clearTimeout(timer);
     }, []);
 

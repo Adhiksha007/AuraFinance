@@ -290,7 +290,7 @@ const MarketTrends = () => {
                                             margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
                                         >
                                             <defs>
-                                                <linearGradient id={`gradient-${selectedData.color}`} x1="0" y1="0" x2="0" y2="1">
+                                                <linearGradient id={`gradient-${selectedData.color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor={selectedData.color} stopOpacity={0.4} />
                                                     <stop offset="95%" stopColor={selectedData.color} stopOpacity={0} />
                                                 </linearGradient>
@@ -325,7 +325,7 @@ const MarketTrends = () => {
                                                 dataKey="value"
                                                 stroke={selectedData.color}
                                                 strokeWidth={3}
-                                                fill={`url(#gradient-${selectedData.color})`}
+                                                fill={`url(#gradient-${selectedData.color.replace('#', '')})`}
                                                 activeDot={{ r: 6, fill: selectedData.color, stroke: 'hsl(var(--background))', strokeWidth: 4 }}
                                             />
                                         </AreaChart>
@@ -435,11 +435,9 @@ const MarketTrends = () => {
                         {signals.map((signal, _) => (
                             <motion.div
                                 key={signal.index}
-                                initial={{ opacity: 0, y: 50 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{ y: -5, scale: 1.02 }}
                                 className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all group"
                             >
                                 <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50 transition-opacity group-hover:opacity-10">
@@ -498,11 +496,9 @@ const MarketTrends = () => {
                         {sectors.map((sector, _) => (
                             <motion.div
                                 key={sector.name}
-                                initial={{ opacity: 0, y: 50 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                whileHover={{ scale: 1.02, y: -5 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">
@@ -531,11 +527,9 @@ const MarketTrends = () => {
                         {indiaSectors.map((sector, _) => (
                             <motion.div
                                 key={sector.name}
-                                initial={{ opacity: 0, y: 50 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5 }}
-                                whileHover={{ scale: 1.02, y: -5 }}
                                 className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
                             >
                                 <div className="flex flex-col">

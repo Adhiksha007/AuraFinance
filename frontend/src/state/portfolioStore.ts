@@ -49,6 +49,16 @@ export const usePortfolioStore = create<PortfolioState>()(
         }),
         {
             name: 'portfolio-storage', // unique name
+            storage: {
+                getItem: (name) => {
+                    const str = sessionStorage.getItem(name);
+                    return str ? JSON.parse(str) : null;
+                },
+                setItem: (name, value) => {
+                    sessionStorage.setItem(name, JSON.stringify(value));
+                },
+                removeItem: (name) => sessionStorage.removeItem(name),
+            },
             partialize: (state) => ({
                 risk: state.risk,
                 amount: state.amount,
@@ -59,7 +69,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                 beta: state.beta,
                 mcData: state.mcData,
                 sentiment: state.sentiment
-            }), // explicit whitelist
+            }) as unknown as PortfolioState, // explicit whitelist
         }
     )
 );

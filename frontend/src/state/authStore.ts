@@ -31,7 +31,11 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             user: null,
             setAuth: (token, user) => set({ token, user }),
-            logout: () => set({ token: null, user: null }),
+            logout: () => {
+                sessionStorage.removeItem('portfolio-storage');
+                localStorage.removeItem('app_theme');
+                set({ token: null, user: null });
+            },
 
             fetchUser: async () => {
                 try {

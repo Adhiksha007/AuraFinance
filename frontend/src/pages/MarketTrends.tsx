@@ -465,7 +465,7 @@ const MarketTrends = () => {
                         variants={containerVariants}
                         initial="hidden"
                         whileInView="show"
-                        viewport={{ once: true, margin: "-50px" }}
+                        viewport={{ once: true }}
                         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                     >
                         {indiaSectors.map((sector) => (

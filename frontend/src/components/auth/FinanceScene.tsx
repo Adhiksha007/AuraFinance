@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Torus, Float, Stars, Sparkles, Text as DreiText, Sphere } from '@react-three/drei';
+import { Torus, Float, Stars, Sparkles, Text as DreiText, Sphere, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Satellite component that orbits at a fixed radius
@@ -156,6 +156,15 @@ export default function FinanceScene() {
             <group scale={0.65}>
                 <AuraCore />
             </group>
+
+            <ContactShadows
+                position={[0, -4, 0]}
+                opacity={0.4}
+                scale={15}
+                blur={2.5}
+                far={10}
+                color="#047857"
+            />
 
             <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
         </>

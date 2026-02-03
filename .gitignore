@@ -28,3 +28,10 @@ __pycache__/
 .venv
 env/
 venv/
+
+# SQLite Database Files (local development only)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3

@@ -23,7 +23,7 @@ export default function Auth() {
 
     useEffect(() => {
         // Simulating 3D environment loading time
-        const timer = setTimeout(() => setIs3DReady(true), 4000);
+        const timer = setTimeout(() => setIs3DReady(true), 1500);
         return () => clearTimeout(timer);
     }, []);
 
@@ -77,33 +77,33 @@ export default function Auth() {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-purple-500/10 z-0 dark:from-primary/20 dark:to-purple-500/20" />
 
                 <div className="w-full h-full z-10 relative flex items-center justify-center">
-                    <AnimatePresence mode="wait">
-                        {!is3DReady ? (
+                    {/* 3D Scene - Always mounted, fades in */}
+                    <motion.div
+                        className="absolute inset-0"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: is3DReady ? 1 : 0 }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                    >
+                        <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+                            <ambientLight intensity={0.5} />
+                            <directionalLight position={[10, 10, 5]} intensity={1} />
+                            <Suspense fallback={null}>
+                                <FinanceScene />
+                            </Suspense>
+                        </Canvas>
+                    </motion.div>
+
+                    {/* Loader - Overlays scene, fades out */}
+                    <AnimatePresence>
+                        {!is3DReady && (
                             <motion.div
                                 key="loader"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
+                                initial={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.5 }}
-                                className="absolute inset-0 flex flex-col items-center justify-center"
+                                transition={{ duration: 0.8, ease: "easeInOut" }}
+                                className="absolute inset-0 flex flex-col items-center justify-center bg-muted/5 backdrop-blur-3xl z-20"
                             >
                                 <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="scene"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 1 }}
-                                className="w-full h-full"
-                            >
-                                <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-                                    <ambientLight intensity={0.5} />
-                                    <directionalLight position={[10, 10, 5]} intensity={1} />
-                                    <Suspense fallback={null}>
-                                        <FinanceScene />
-                                    </Suspense>
-                                </Canvas>
                             </motion.div>
                         )}
                     </AnimatePresence>

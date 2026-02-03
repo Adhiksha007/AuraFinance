@@ -201,9 +201,7 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
     port_beta = calculate_portfolio_beta(table_data)
 
     news, sentiment_wide = sentiment_engine.get_latest_sentiment()
-    print(news['Ticker'].value_counts())
-    sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index) 
-    print(sentiment)
+    sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index)
 
     return results, table_data, port_beta, sentiment
 

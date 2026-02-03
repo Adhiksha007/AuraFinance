@@ -33,7 +33,7 @@ def fetch_data(pkl_file) -> pd.DataFrame:
     returns = pd.concat(closing_data, axis=1)
     returns = returns.interpolate(method='time', limit_direction='both', axis=0)
     # Convert columns to string for JSON serialization
-    returns = returns.pct_change().dropna()
+    returns = returns.pct_change(fill_method=None).dropna()
     returns.columns = returns.columns.astype(str)
     return returns
 
@@ -59,7 +59,7 @@ def calculate_annual_returns(assets, pkl_file):
         prices[ticker] = hist["Close"].tail(252)
 
     # --- Daily returns ---
-    daily_returns = prices.pct_change().dropna()
+    daily_returns = prices.pct_change(fill_method=None).dropna()
 
     # --- Annualized Mean Return ---
     annualized_returns = daily_returns.mean() * 252

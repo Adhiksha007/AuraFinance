@@ -29,7 +29,8 @@ def fetch_bulk_market_data(tickers: list, period="2y", interval="1d") -> pd.Data
             interval=interval, 
             group_by='ticker', 
             auto_adjust=True, 
-            threads=True
+            threads=True,
+            progress=False
         )
         return data
     except Exception as e:

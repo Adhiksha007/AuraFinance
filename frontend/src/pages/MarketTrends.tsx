@@ -167,10 +167,7 @@ const MarketTrends = () => {
     const marketStatus = data?.market_status || { "New York": "CLOSED", "London": "CLOSED", "Tokyo": "CLOSED", "global_is_open": false };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+        <div
             className="p-8 min-h-screen bg-background text-foreground font-sans"
         >
             <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -435,15 +432,9 @@ const MarketTrends = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {signals.map((signal, _) => (
-                            <motion.div
-                                layout
+                            <div
                                 key={signal.index}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                whileHover={{ scale: 1.02, y: -5 }}
-                                className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 transition-all group"
+                                className="bg-card p-5 rounded-2xl border border-border shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 group"
                             >
                                 <div className="absolute top-0 right-0 p-3 opacity-5 font-bold text-7xl select-none text-muted-foreground/50 transition-opacity group-hover:opacity-10">
                                     {signal.health_score}
@@ -486,7 +477,7 @@ const MarketTrends = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -500,14 +491,12 @@ const MarketTrends = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {sectors.map((sector, _) => (
                             <motion.div
-                                layout
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                whileHover={{ scale: 1.02, y: -5 }}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
                             >
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-1">
@@ -534,14 +523,12 @@ const MarketTrends = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {indiaSectors.map((sector, _) => (
                             <motion.div
-                                layout
                                 key={sector.name}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                whileHover={{ scale: 1.02, y: -5 }}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md transition-all cursor-default"
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
                             >
                                 <div className="flex flex-col">
                                     <h4 className="font-bold text-lg truncate max-w-[180px] text-foreground">{sector.name}</h4>
@@ -566,7 +553,7 @@ const MarketTrends = () => {
                 </div>
             </div>
 
-        </motion.div>
+        </div>
     );
 };
 

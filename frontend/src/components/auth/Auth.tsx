@@ -15,18 +15,9 @@ function GlobalLoader() {
     const [show, setShow] = useState(true);
 
     useEffect(() => {
-        // Success: Progress complete
-        if (progress === 100) {
-            const timer = setTimeout(() => setShow(false), 800);
-            return () => clearTimeout(timer);
-        }
-    }, [progress]);
-
-    // Safety: Force close after 3 seconds if stuck (e.g. font network issue)
-    useEffect(() => {
         const timer = setTimeout(() => {
             setShow(false);
-        }, 3000);
+        }, 2000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -48,7 +39,6 @@ function GlobalLoader() {
                         </div>
                         <div className="flex flex-col items-center gap-2">
                             <h3 className="text-xl font-bold tracking-tight text-foreground">AuraFinance</h3>
-                            <p className="text-sm text-muted-foreground animate-pulse">Initializing 3D Environment...</p>
                         </div>
                         <div className="w-64 h-1 bg-secondary rounded-full mt-2 overflow-hidden">
                             <motion.div

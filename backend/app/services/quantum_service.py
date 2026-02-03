@@ -12,6 +12,10 @@ from app.services.sentiment import sentiment_engine
 
 ALPHA = 0.05
 
+import warnings
+# Suppress scipy optimization warnings that are expected during boundary clipping
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy.optimize")
+
 def compute_mu_cov(returns: pd.DataFrame, tickers: List[str]) -> Tuple[pd.Series, pd.DataFrame]:
     # 1. Base Stats
     mu = returns.mean(axis=0) * 252.0

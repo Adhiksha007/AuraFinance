@@ -49,18 +49,13 @@ export default function Portfolio() {
     } = usePortfolioStore();
 
     // Effect to handle restoration sequence
+    // Effect to handle restoration sequence
     useEffect(() => {
         if (result && isRestoring) {
-            setLoadingStep('restoring');
-            // Restoration: Render charts immediately (hidden) to "get the freeze over with" behind the loader
-            setChartsReady(true);
-
-            // Hold loader for 2.5s to ensure smoothness
-            const timer = setTimeout(() => {
-                setLoadingStep('complete');
-                setIsRestoring(false);
-            }, 2500);
-            return () => clearTimeout(timer);
+            // Instant restore without animation delay if data is already there
+            setLoadingStep('complete');
+            setChartsReady(true); // Render charts immediately
+            setIsRestoring(false);
         } else if (!result) {
             setIsRestoring(false);
             setLoadingStep('idle');

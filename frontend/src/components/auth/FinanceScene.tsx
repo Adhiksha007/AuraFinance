@@ -76,6 +76,7 @@ function AuraCore() {
         <group ref={groupRef}>
             {/* Central Glowing Dollar Sign */}
             <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                {/* Main Visible Text */}
                 <DreiText
                     ref={coreRef as any}
                     fontSize={2.5}
@@ -94,6 +95,22 @@ function AuraCore() {
                         clearcoatRoughness={0.1}
                     />
                 </DreiText>
+
+                {/* Shadow Caster Stack - Simulates Volume */}
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <DreiText
+                        key={i}
+                        fontSize={2.5}
+                        font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff"
+                        anchorX="center"
+                        anchorY="middle"
+                        // Stack centered around 0 (from -0.2 to +0.2)
+                        position={[0, 0, (i - 3.5) * 0.05]}
+                    >
+                        $
+                        <meshBasicMaterial color="#000000" opacity={0} transparent />
+                    </DreiText>
+                ))}
             </Float>
 
             {/* Ring 1 - White Glass */}
@@ -158,12 +175,13 @@ export default function FinanceScene() {
             </group>
 
             <ContactShadows
-                position={[0, -4, 0]}
-                opacity={0.4}
-                scale={15}
-                blur={2.5}
+                position={[0, -2.5, 0]}
+                opacity={0.9}
+                scale={6}
+                blur={2}
                 far={10}
-                color="#047857"
+                resolution={720}
+                color="#000000"
             />
 
             <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />

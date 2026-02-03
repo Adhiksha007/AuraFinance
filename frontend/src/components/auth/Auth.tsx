@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import FinanceScene from './FinanceScene';
@@ -9,17 +10,18 @@ import { useAuthStore } from '../../state/authStore';
 import { useNavigate } from 'react-router-dom';
 
 function GlobalLoader() {
-    const { active, progress } = useProgress();
+    const { progress } = useProgress();
     const [show, setShow] = useState(true);
 
     useEffect(() => {
-        // When invalidation stops and progress is 100, we are ready.
-        // We add a small buffer to ensure visual smoothness.
-        if (!active && progress === 100) {
-            const timer = setTimeout(() => setShow(false), 800);
+        // Wait for progress to complete (100%).
+        // We rely on progress hitting 100 to dismiss.
+        if (progress === 100) {
+            // Add a delay to allow for shader compilation and initial render frame
+            const timer = setTimeout(() => setShow(false), 1000);
             return () => clearTimeout(timer);
         }
-    }, [active, progress]);
+    }, [progress]);
 
     return (
         <AnimatePresence>
@@ -127,7 +129,9 @@ export default function Auth() {
                     <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
                         <ambientLight intensity={0.5} />
                         <directionalLight position={[10, 10, 5]} intensity={1} />
-                        <FinanceScene />
+                        <Suspense fallback={null}>
+                            <FinanceScene />
+                        </Suspense>
                     </Canvas>
                 </div>
                 <div className="absolute bottom-10 left-10 z-20">

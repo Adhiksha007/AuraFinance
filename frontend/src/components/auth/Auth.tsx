@@ -9,19 +9,26 @@ import apiClient from '../../api/apiClient';
 import { useAuthStore } from '../../state/authStore';
 import { useNavigate } from 'react-router-dom';
 
+
 function GlobalLoader() {
     const { progress } = useProgress();
     const [show, setShow] = useState(true);
 
     useEffect(() => {
-        // Wait for progress to complete (100%).
-        // We rely on progress hitting 100 to dismiss.
+        // Success: Progress complete
         if (progress === 100) {
-            // Add a delay to allow for shader compilation and initial render frame
-            const timer = setTimeout(() => setShow(false), 1000);
+            const timer = setTimeout(() => setShow(false), 800);
             return () => clearTimeout(timer);
         }
     }, [progress]);
+
+    // Safety: Force close after 6 seconds if stuck (e.g. font network issue)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShow(false);
+        }, 6000);
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
         <AnimatePresence>

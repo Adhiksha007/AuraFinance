@@ -40,8 +40,11 @@ function App() {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    // Only apply dark mode if user is logged in AND has selected dark theme
-    if (token && settings?.theme === 'dark') {
+    // Check localStorage first for immediate application
+    const localTheme = localStorage.getItem('app_theme');
+    const shouldUseDark = (settings?.theme === 'dark') || (!settings && localTheme === 'dark');
+
+    if (token && shouldUseDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');

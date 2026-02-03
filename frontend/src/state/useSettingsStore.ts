@@ -46,6 +46,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         try {
             const response = await apiClient.get('/settings/');
             set({ settings: response.data, loading: false });
+            if (response.data.theme) {
+                localStorage.setItem('app_theme', response.data.theme);
+            }
         } catch (error) {
             console.error('Failed to fetch settings:', error);
             set({ error: 'Failed to load settings', loading: false });
@@ -62,6 +65,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         try {
             const response = await apiClient.patch('/settings/', updates);
             set({ settings: response.data });
+            if (updates.theme) {
+                localStorage.setItem('app_theme', updates.theme);
+            }
         } catch (error) {
             console.error('Failed to update settings:', error);
             set({ settings: previousSettings, error: 'Failed to update settings' });

@@ -94,10 +94,9 @@ def replace_nan(obj):
 def fetch_and_update_data(assets, force_refresh=False):
     data = {}
     global PKL_FILE
-    
     # 1. Load existing data
     if os.path.exists(PKL_FILE) and not force_refresh:
-        data = joblib.load(PKL_FILE)    
+        data = joblib.load(PKL_FILE)
 
     today_dt = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     today_str = today_dt.strftime('%Y-%m-%d')
@@ -127,35 +126,32 @@ def fetch_and_update_data(assets, force_refresh=False):
                     data[asset]["history"] = hist
             except Exception as e:
                 print(f"⚠️ Download error for {asset}: {e}")
-        
         else:
             # Incremental Update Logic
             existing_hist = data[asset]["history"]
             last_date = existing_hist.index.max()
-            
-            # If the last date in our file is already Today, don't even call the API
             if last_date >= today_dt:
                 continue
 
-            # Attempt to fetch from the day after our last record
-            fetch_start = (last_date + timedelta(days=1)).strftime('%Y-%m-%d')
-            
+            # FIX: Start from last_date instead of last_date + 1
+            # This prevents the "Start date > End date" error if the market hasn't updated yet.
+            fetch_start = last_date.strftime('%Y-%m-%d')
+
             try:
-                # We fetch without an 'end' date to get everything up to the current moment
                 new_hist = ticker.history(start=fetch_start)
-                
+
                 if not new_hist.empty:
                     new_hist.columns = new_hist.columns.get_level_values(0)
                     new_hist.index = new_hist.index.tz_localize(None).normalize()
-                    
-                    # Filter: Only keep rows that are actually NEWER than our last_date
+
+                    # Filter: ONLY keep rows strictly newer than our last_date
                     new_rows = new_hist[new_hist.index > last_date]
-                    
+
                     if not new_rows.empty:
                         data[asset]["history"] = pd.concat([existing_hist, new_rows])
-                        # Safety: remove any accidental duplicates
+                        # Extra safety for duplicates
                         data[asset]["history"] = data[asset]["history"][~data[asset]["history"].index.duplicated(keep='last')]
-                    
+
             except Exception as e:
                 print(f"⚠️ Update error for {asset}: {e}")
 

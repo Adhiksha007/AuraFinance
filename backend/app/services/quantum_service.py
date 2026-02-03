@@ -8,7 +8,7 @@ from qiskit.primitives import Sampler
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 
-from app.services.sentiment import sentiment_engine
+from app.services.sentiment import get_latest_sentiment
 
 ALPHA = 0.05
 
@@ -21,7 +21,7 @@ def compute_mu_cov(returns: pd.DataFrame, tickers: List[str]) -> Tuple[pd.Series
     mu = returns.mean(axis=0) * 252.0
     cov = returns.cov() * 252.0
     
-    _, sentiment_wide = sentiment_engine.get_latest_sentiment()
+    _, sentiment_wide = get_latest_sentiment()
     s = sentiment_wide.iloc[-1].T.reindex(mu.index) 
 
     mu_adjusted = mu + (ALPHA * s)
@@ -332,23 +332,29 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
     # Regularization to prevent SVD convergence errors
     daily_cov = daily_cov + np.eye(daily_cov.shape[0]) * 1e-6
 
+    # Vectorized simulation - generate all paths at once
+    # Shape: (num_simulations, time_horizon, num_assets)
+    all_random_returns = np.random.multivariate_normal(
+        daily_returns, 
+        daily_cov, 
+        size=(num_simulations, time_horizon)
+    )
+    
+    # Portfolio returns for each simulation: (num_simulations, time_horizon)
+    portfolio_daily_returns = np.sum(all_random_returns * weights, axis=2)
+    
+    # Calculate cumulative portfolio values using vectorized operations
+    # Start with initial investment
     simulation_results = np.zeros((time_horizon, num_simulations))
+    simulation_results[0, :] = portfolio_value
+    
+    # Vectorized cumulative product for all simulations at once
+    for t in range(1, time_horizon):
+        simulation_results[t, :] = simulation_results[t-1, :] * (1 + portfolio_daily_returns[:, t])
+    
+    # Calculate daily returns for all simulations
     daily_returns_results = np.zeros((time_horizon-1, num_simulations))
-
-    portfolio_value = initial_investment
-
-    for i in range(num_simulations):
-        daily_portfolio_values = np.zeros(time_horizon)
-        daily_portfolio_values[0] = portfolio_value
-
-        random_returns = np.random.multivariate_normal(daily_returns, daily_cov, time_horizon)
-        portfolio_daily_returns = np.sum(random_returns * weights, axis=1)
-
-        for t in range(1, time_horizon):
-            daily_portfolio_values[t] = daily_portfolio_values[t-1] * (1 + portfolio_daily_returns[t])
-            if t > 0:
-                daily_returns_results[t-1, i] = (daily_portfolio_values[t] / daily_portfolio_values[t-1]) - 1
-        simulation_results[:, i] = daily_portfolio_values
+    daily_returns_results = (simulation_results[1:, :] / simulation_results[:-1, :]) - 1
 
     final_values = simulation_results[-1, :]
     percentile_values = np.percentile(final_values, percentiles)

@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from app.services.data_ingestion import fetch_data, calculate_annual_returns, create_table_values, calculate_portfolio_beta
 from app.services.quantum_service import compute_mu_cov, build_qubo, solve_qubo_with_qaoa, unified_portfolio_analysis, monte_carlo_simulation
 from app.services.tickers import get_tickers
-from app.services.sentiment import sentiment_engine
+from app.services.sentiment import get_latest_sentiment
+from app.services.cache_manager import cache
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -194,9 +195,8 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
     )
     weights = results['portfolio_config']['weights']
     table_data = create_table_values(weights, investment_amount, investment_horizon, 0.02, results['annualized_stats']['expected_return'], PKL_FILE)
-    port_beta = calculate_portfolio_beta(table_data)
-
-    news, sentiment_wide = sentiment_engine.get_latest_sentiment()
+    # Sentiment data is now cached internally in sentiment.py
+    news, sentiment_wide = get_latest_sentiment()
     sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index)
 
     return results, table_data, port_beta, sentiment

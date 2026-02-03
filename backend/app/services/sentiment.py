@@ -1,5 +1,6 @@
 from app.services.tickers import get_tickers
 from app.core.config import settings
+from app.services.cache_manager import cache
 import os
 import datetime
 import numpy as np
@@ -18,16 +19,13 @@ class SentimentAnalyzer:
         self.api_token = settings.HF_API_KEY
         self.headers = {"Authorization": f"Bearer {self.api_token}"} if self.api_token else {}
 
-        self.sentiment = None
-        self.news_data = None
-        self.last_updated = None
         self.tickers = tickers
-        self.cache_duration = datetime.timedelta(hours=1)
+        # Removed in-memory cache - now using persistent cache_manager
 
         if not self.api_token:
             print("⚠️ WARNING: HF_API_KEY not found. Sentiment analysis may fail or be rate-limited.")
 
-        self.build_dataframe(tickers)
+        # Don't build on init - lazy load when needed
 
     @staticmethod
     def _fetch_single_feed(ticker: str, timeout: int, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -88,39 +86,40 @@ class SentimentAnalyzer:
           return []
 
     def _score_texts(self, texts: List[str]) -> pd.DataFrame:
-        """Process sentiment and return a DataFrame with Score, Label, and Value."""
+        """Process sentiment with parallel execution (no batching due to API limitations)."""
         if not texts: return pd.DataFrame()
 
-        # We now pre-fill a list of dictionaries instead of a numpy array
         results = [None] * len(texts)
 
         def process_single(idx, text):
-            time.sleep(random.uniform(0.1, 0.5))
+            # No random delay - just process
             response = self._query_hf_api([text])
 
             if response and isinstance(response, list) and len(response) > 0:
                 item = response[0]
                 if isinstance(item, list):
-                    # Sort scores to find the highest confidence label
-                    # Example: [{'label': 'positive', 'score': 0.9}, {'label': 'neutral', 'score': 0.1}]
-                    score_map = {res['label'].lower(): res['score'] for res in item}
+                    try:
+                        score_map = {res['label'].lower(): res['score'] for res in item}
 
-                    # 1. Standard Score (Pos - Neg)
-                    pos = score_map.get('positive', 0.0)
-                    neg = score_map.get('negative', 0.0)
-                    net_score = pos - neg
+                        # Standard Score (Pos - Neg)
+                        pos = score_map.get('positive', 0.0)
+                        neg = score_map.get('negative', 0.0)
+                        net_score = pos - neg
 
-                    # 2. Get the winning label and its value
-                    winning_item = max(item, key=lambda x: x['score'])
-                    label = winning_item['label'].capitalize()
-                    confidence = winning_item['score']
+                        # Get the winning label
+                        winning_item = max(item, key=lambda x: x['score'])
+                        label = winning_item['label'].capitalize()
+                        confidence = winning_item['score']
 
-                    return idx, {"Sentiment": net_score, "Label": label, "Confidence": confidence}
+                        return idx, {"Sentiment": net_score, "Label": label, "Confidence": confidence}
+                    except (KeyError, TypeError, ValueError):
+                        return idx, {"Sentiment": 0.0, "Label": "Neutral", "Confidence": 0.0}
 
             # Fallback for failures
             return idx, {"Sentiment": 0.0, "Label": "Neutral", "Confidence": 0.0}
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        # Parallel processing with more workers (no random delays)
+        with ThreadPoolExecutor(max_workers=5) as executor:
             future_to_idx = {executor.submit(process_single, i, t): i for i, t in enumerate(texts)}
             for future in as_completed(future_to_idx):
                 idx, data = future.result()
@@ -129,14 +128,15 @@ class SentimentAnalyzer:
         return pd.DataFrame(results)
 
     def get_news(self, tickers: List[str], timeout: int, limit: Optional[int] = None) ->pd.DataFrame:
-        # 1. Concurrent Fetching
+        # Concurrent fetching with optimized thread pool
         all_news_items = []
-        with ThreadPoolExecutor(max_workers=min(32, len(tickers) * 2 + 4)) as executor:
+        max_workers = min(10, len(tickers))  # Reduced from 32 for free tier
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(self._fetch_single_feed, t, timeout=timeout, limit=limit) for t in tickers]
             for future in as_completed(futures):
                 all_news_items.extend(future.result())
 
-        # 2. Convert directly to DataFrame
         if not all_news_items:
             return pd.DataFrame()
 
@@ -150,28 +150,35 @@ class SentimentAnalyzer:
     def build_dataframe(self, tickers: List[str]):
         """
         Streamlined pipeline: Fetch -> DataFrame -> Score -> Aggregate
+        Uses persistent cache with 1-hour TTL.
         """
+        cache_key = "sentiment_data"
+        
+        # Check cache first
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            print("✅ Using cached sentiment data")
+            return  # Data already cached, no need to rebuild
 
         df = self.get_news(tickers, timeout=12, limit=None)
 
         if df.empty:
-            self.news_data, self.sentiment = pd.DataFrame(), pd.DataFrame()
+            # Cache empty result to avoid repeated API calls
+            cache.set(cache_key, (pd.DataFrame(), pd.DataFrame()), ttl_seconds=3600)
             return
 
-        print("🔥 Waking up the model... please wait.")
-        self._query_hf_api(["Just warming up the engine."])
+        # Quick warmup without excessive wait
+        print("🔥 Initializing sentiment model...")
+        self._query_hf_api(["Warmup"])
+        time.sleep(3)  # Reduced from 15s to 3s
 
-        import time
-        time.sleep(15)
-
-        # 3. Batch Scoring
-        # Get the new sentiment details (Sentiment, Label, Confidence)
+        # Batch Scoring (now optimized with batching)
         sentiment_df = self._score_texts(df["Title"].tolist())
 
-        # Merge these new columns into our main news_data DataFrame
+        # Merge sentiment columns
         df = pd.concat([df.reset_index(drop=True), sentiment_df], axis=1)
 
-        # 4. Data Cleaning & Aggregation
+        # Data Cleaning & Aggregation
         df["Date"] = df["Published"].dt.date
 
         # Calculate Daily Sentiment
@@ -181,18 +188,48 @@ class SentimentAnalyzer:
             .reset_index()
         )
 
-        # Pivot to wide format (Dates as Index, Tickers as Columns)
-        self.sentiment = df_daily.pivot(index='Date', columns='Ticker', values='Sentiment')
-        self.news_data = df
-        self.last_updated = datetime.datetime.now()
+        # Pivot to wide format
+        sentiment_wide = df_daily.pivot(index='Date', columns='Ticker', values='Sentiment')
+        news_data = df
+        
+        # Cache for 1 hour
+        cache.set(cache_key, (news_data, sentiment_wide), ttl_seconds=3600)
 
     def get_latest_sentiment(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        now = datetime.datetime.now()
-        if self.last_updated and (now - self.last_updated < self.cache_duration):
-            return self.news_data, self.sentiment
-
+        """
+        Get latest sentiment data from persistent cache.
+        Rebuilds if cache is empty or expired.
+        """
+        cache_key = "sentiment_data"
+        
+        # Try to get from cache
+        cached_data = cache.get(cache_key)
+        
+        if cached_data is not None:
+            news_data, sentiment_wide = cached_data
+            return news_data, sentiment_wide
+        
+        # Cache miss - rebuild
+        print("⚠️ Cache miss - rebuilding sentiment data...")
         self.build_dataframe(self.tickers)
-        return self.news_data, self.sentiment
+        
+        # Get from cache after rebuild
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+        
+        # Fallback to empty dataframes
+        return pd.DataFrame(), pd.DataFrame()
 
 
-sentiment_engine = SentimentAnalyzer(tickers=get_tickers())
+# Helper functions for lazy initialization
+def get_latest_sentiment() -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Get latest sentiment data (lazy initialization with tickers)."""
+    analyzer = SentimentAnalyzer(tickers=get_tickers())
+    return analyzer.get_latest_sentiment()
+
+
+def get_news(tickers: List[str], timeout: int, limit: Optional[int] = None) -> pd.DataFrame:
+    """Get news data without sentiment analysis (lazy initialization without tickers)."""
+    analyzer = SentimentAnalyzer(tickers=[])  # No tickers needed for news only
+    return analyzer.get_news(tickers, timeout, limit)

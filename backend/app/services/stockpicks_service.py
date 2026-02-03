@@ -4,6 +4,7 @@ import numpy as np
 import logging
 from datetime import datetime, timedelta
 from app.services.tickers import TICKERS
+from app.services.cache_manager import cache
 import concurrent.futures
 
 logger = logging.getLogger(__name__)
@@ -304,24 +305,20 @@ def generate_signal(row, is_market_bullish: bool, earnings_impending: bool) -> d
             "vol_regime": round(vol_regime, 2)
         }
 
-# --- Cache Storage ---
-_MARKET_CACHE = {
-    "data": [],
-    "last_updated": None
-}
 
 async def get_ai_recommendations(force_refresh: bool = False):
-    global _MARKET_CACHE
+    """
+    Get AI-powered stock recommendations.
+    Uses persistent cache with 15-minute TTL.
+    """
+    cache_key = "ai_recommendations"
     
-    # Check cache validity (15 minutes)
-    now = datetime.now()
-    if (not force_refresh and 
-        _MARKET_CACHE["data"] and 
-        _MARKET_CACHE["last_updated"] and 
-        (now - _MARKET_CACHE["last_updated"]) < timedelta(minutes=15)):
-        
-        logger.info("Returning cached market recommendations.")
-        return _MARKET_CACHE["data"]
+    # Check cache first (unless force refresh)
+    if not force_refresh:
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            logger.info("Returning cached market recommendations.")
+            return cached_data
         
     logger.info("Cache expired or empty. Fetching fresh market data...")
     recommendations = []
@@ -429,19 +426,14 @@ async def get_ai_recommendations(force_refresh: bool = False):
             }
             recommendations.append(rec)
         
-        # Update Cache
+        # Cache for 15 minutes
         if recommendations:
-            _MARKET_CACHE["data"] = recommendations
-            _MARKET_CACHE["last_updated"] = datetime.now()
+            cache.set(cache_key, recommendations, ttl_seconds=900)
             
     except Exception as e:
         logger.error(f"Error in get_ai_recommendations: {e}")
         import traceback
         traceback.print_exc()
-        # Return stale cache if available and fetch failed
-        if _MARKET_CACHE["data"]:
-             logger.warning("Returning stale cache due to fetch error.")
-             return _MARKET_CACHE["data"]
         
     return recommendations
 

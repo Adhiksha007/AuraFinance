@@ -1,13 +1,18 @@
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
 import threading
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from app.core.config import settings
 from app.api.v1 import auth, stockpicks, market, watchlist, market_trends, quantum_portfolio, settings as settings_router, users, goals
 from app.core.db import create_db_and_tables
+from app.core.rate_limiter import rate_limit_middleware
+from app.services.cache_manager import cache
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    default_response_class=ORJSONResponse  # Use orjson for 2-3x faster JSON
 )
 
 # Set all CORS enabled origins
@@ -20,6 +25,12 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+# Add GZip compression middleware (compress responses > 1KB)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Add rate limiting middleware
+app.middleware("http")(rate_limit_middleware)
+
 def background_load():
     # This thread puts these heavy libraries into the global sys.modules cache
     import qiskit.primitives
@@ -30,6 +41,11 @@ def background_load():
 @app.on_event("startup")
 async def startup_event():
     create_db_and_tables()
+    
+    # Clean expired cache entries
+    cache.clear_expired()
+    
+    # Background load heavy libraries
     threading.Thread(target=background_load, daemon=True).start()
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
@@ -45,3 +61,12 @@ app.include_router(goals.router, prefix=f"{settings.API_V1_STR}/goals", tags=["g
 @app.get("/")
 def read_root():
     return {"message": "Welcome to AuraFinance API"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring."""
+    stats = cache.get_stats()
+    return {
+        "status": "healthy",
+        "cache": stats
+    }

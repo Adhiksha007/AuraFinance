@@ -5,7 +5,8 @@ import concurrent.futures
 import numpy as np
 import joblib
 from typing import List, Dict, Any, Optional
-from app.services.sentiment import sentiment_engine
+from app.services.sentiment import get_news as get_sentiment_news
+from app.services.cache_manager import cache
 
 def get_historical_data(ticker: str, period: str="1mo", interval: str='1d') -> pd.DataFrame:
     stock = yf.Ticker(ticker)
@@ -166,17 +167,36 @@ def calculate_portfolio_beta(df_values: pd.DataFrame) -> Optional[float]:
 def fetch_realtime_news(tickers: List[str], timeout:int=1, limit:int=10) -> pd.DataFrame:
     """
     Pulls news for multiple tickers in parallel and returns a cleaned pandas DataFrame.
+    Uses cache with 30-minute TTL.
     """
-    df = sentiment_engine.get_news(tickers, timeout=timeout, limit=limit)
+    cache_key = f"news:{','.join(sorted(tickers))}:{limit}"
+    
+    # Check cache first
+    cached_news = cache.get(cache_key)
+    if cached_news is not None:
+        return cached_news
+    
+    df = get_sentiment_news(tickers, timeout=timeout, limit=limit)
     if not df.empty:
         df['Date'] = pd.to_datetime(df["Published"], errors='coerce') # Handle parsing for sorting
         df['Date'] = df['Date'].dt.strftime('%b %d, %Y') # Format back to string
+    
+    # Cache for 30 minutes
+    cache.set(cache_key, df, ttl_seconds=1800)
     return df
 
 def get_ticker_summary(ticker_symbol: str) -> pd.DataFrame:
     """
     Fetch fundamental summary data for a ticker.
+    Uses persistent cache with 1-hour TTL.
     """
+    cache_key = f"ticker_summary:{ticker_symbol}"
+    
+    # Check cache first
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     stock = yf.Ticker(ticker_symbol)
     info = stock.info
     calendar = stock.calendar
@@ -233,4 +253,9 @@ def get_ticker_summary(ticker_symbol: str) -> pd.DataFrame:
         ]
     }
     
-    return pd.DataFrame(summary_data)
+    df = pd.DataFrame(summary_data)
+    
+    # Cache for 1 hour
+    cache.set(cache_key, df, ttl_seconds=3600)
+    
+    return df

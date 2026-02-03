@@ -26,7 +26,12 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = session.get(User, token_data.sub)
+    # Convert sub from string to int (User.id is int, but JWT stores as string)
+    user_id = int(token_data.sub) if token_data.sub else None
+    if not user_id:
+        raise HTTPException(status_code=403, detail="Invalid token")
+    
+    user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:

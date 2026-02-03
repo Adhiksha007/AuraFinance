@@ -66,4 +66,7 @@ def get_ticker_summary_endpoint(ticker: str) -> Any:
             return []
         return df.to_dict(orient='records')
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        if "Too Many Requests" in error_msg or "Rate limited" in error_msg:
+             raise HTTPException(status_code=429, detail="Upstream API rate limit exceeded. Please try again later.")
+        raise HTTPException(status_code=500, detail=error_msg)

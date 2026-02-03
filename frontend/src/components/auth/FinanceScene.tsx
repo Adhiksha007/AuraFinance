@@ -175,7 +175,7 @@ export default function FinanceScene() {
             </group>
 
             <ContactShadows
-                position={[0, -2.5, 0]}
+                position={[0.05, -2.5, 0]}
                 opacity={0.9}
                 scale={6}
                 blur={2}

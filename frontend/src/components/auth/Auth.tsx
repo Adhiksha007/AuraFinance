@@ -23,7 +23,7 @@ export default function Auth() {
 
     useEffect(() => {
         // Simulating 3D environment loading time
-        const timer = setTimeout(() => setIs3DReady(true), 3000);
+        const timer = setTimeout(() => setIs3DReady(true), 4000);
         return () => clearTimeout(timer);
     }, []);
 

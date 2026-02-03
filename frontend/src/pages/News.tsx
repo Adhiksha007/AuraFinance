@@ -1,21 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import apiClient from '../api/apiClient';
-
-const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    show: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1
-        }
-    }
-};
-
-const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
-};
 
 export default function News() {
     const [news, setNews] = useState([]);
@@ -42,10 +27,9 @@ export default function News() {
 
     return (
         <motion.div
-            initial="hidden"
-            animate="show"
-            variants={containerVariants}
-            key={news.length}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
             className="space-y-8"
         >
             <header>
@@ -53,20 +37,18 @@ export default function News() {
                 <p className="text-muted-foreground mt-2">Personalized financial updates.</p>
             </header>
 
-            <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                key={news.length}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {news.map((article: any, idx: number) => (
                     <motion.a
                         key={`${article.Ticker}-${idx}`}
                         href={article.Link}
+                        layout
                         target="_blank"
                         rel="noopener noreferrer"
-                        variants={itemVariants}
+                        initial={{ opacity: 0, y: 50 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.5 }}
                         className="block bg-card p-6 rounded-2xl shadow-sm border border-border/50 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:bg-accent/40"
                     >
                         <div className="flex justify-between items-start mb-4">
@@ -76,7 +58,7 @@ export default function News() {
                         <p className="text-lg font-bold text-foreground mb-2 line-clamp-4">{article.Title}</p>
                     </motion.a>
                 ))}
-            </motion.div>
+            </div>
         </motion.div>
     );
 }

@@ -29,6 +29,8 @@ class SentimentAnalyzer:
         if not self.api_token:
             print("⚠️ WARNING: HF_API_KEY not found. Using VADER sentiment only.")
 
+        self.build_dataframe(self.tickers)
+
     @staticmethod
     def _fetch_single_feed(ticker: str, timeout: int, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Fetch RSS feed with strict network timeout."""
@@ -205,7 +207,6 @@ class SentimentAnalyzer:
             return news_data, sentiment_wide
         
         # Cache miss - rebuild
-        print("⚠️ Cache miss - rebuilding sentiment data...")
         self.build_dataframe(self.tickers)
         
         # Get from cache after rebuild

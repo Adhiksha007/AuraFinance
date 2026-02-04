@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 import Settings from './pages/Settings';
 import GoalPlanner from './pages/GoalPlanner';
 import Comparison from './pages/Comparison';
+import Backtest from './pages/Backtest';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = useAuthStore((state) => state.token);
@@ -68,6 +69,7 @@ function App() {
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/backtest" element={<Backtest />} />
                   <Route path="/comparison" element={<Comparison />} />
                   <Route path="/stock-picks" element={<StockPicks />} />
                   <Route path="/news" element={<News />} />

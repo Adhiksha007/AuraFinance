@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict, Any, Optional
 import numpy as np
 import pandas as pd
+import logging
 from qiskit_optimization import QuadraticProgram
 from qiskit_optimization.converters import QuadraticProgramToQubo
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
@@ -10,24 +11,54 @@ from qiskit_algorithms.optimizers import COBYLA
 
 from app.services.sentiment import sentiment_engine
 
-ALPHA = 0.05
+# Configure logging
+logger = logging.getLogger(__name__)
 
-import warnings
-# Suppress scipy optimization warnings that are expected during boundary clipping
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy.optimize")
+# Constants with documentation
+DEFAULT_SENTIMENT_ALPHA = 0.05  # Default sentiment adjustment weight (5% of returns)
+LAMBDA_MIN = 0.1  # Minimum risk penalty (high risk tolerance)
+LAMBDA_MAX = 10.0  # Maximum risk penalty (low risk tolerance)
+MIN_WEIGHT_PCT = 0.01  # Minimum 1% allocation per asset to ensure diversification
+MAX_ASSETS = 11  # Maximum number of assets in portfolio (QAOA complexity limit)
 
-def compute_mu_cov(returns: pd.DataFrame, tickers: List[str]) -> Tuple[pd.Series, pd.DataFrame]:
+def compute_mu_cov(
+    returns: pd.DataFrame, 
+    tickers: List[str],
+    use_sentiment: bool = True,
+    sentiment_alpha: float = DEFAULT_SENTIMENT_ALPHA
+) -> Tuple[pd.Series, pd.DataFrame]:
+    """
+    Compute expected returns and covariance matrix with optional sentiment adjustment.
+    
+    Args:
+        returns: Historical returns DataFrame
+        tickers: List of ticker symbols
+        use_sentiment: Whether to apply sentiment adjustment (default: True)
+        sentiment_alpha: Weight for sentiment adjustment (default: 0.05)
+    
+    Returns:
+        Tuple of (expected returns, covariance matrix)
+    """
     # 1. Base Stats
     mu = returns.mean(axis=0) * 252.0
     cov = returns.cov() * 252.0
     
-    _, sentiment_wide = sentiment_engine.get_latest_sentiment()
-    s = sentiment_wide.iloc[-1].T.reindex(mu.index) 
+    # 2. Optional sentiment adjustment
+    if use_sentiment:
+        try:
+            _, sentiment_wide = sentiment_engine.get_latest_sentiment()
+            s = sentiment_wide.iloc[-1].T.reindex(mu.index)
+            mu_adjusted = mu + (sentiment_alpha * s)
+        except Exception as e:
+            logger.warning(f"Sentiment data unavailable: {e}, using base returns")
+            mu_adjusted = mu
+    else:
+        mu_adjusted = mu
 
-    mu_adjusted = mu + (ALPHA * s)
-
+    # 3. Clean NaN/Inf values
     mu_clean = np.nan_to_num(mu_adjusted.astype(float), nan=0.0, posinf=0.0, neginf=0.0)
     cov_clean = np.nan_to_num(cov.astype(float), nan=0.0, posinf=0.0, neginf=0.0)
+    
     return pd.Series(mu_clean, index=mu.index), pd.DataFrame(cov_clean, index=cov.index, columns=cov.columns)
 
 def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int, assets: List[str]) -> QuadraticProgram:
@@ -47,16 +78,22 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
         selection_vec : binary vector indicating selected assets
         selected_assets : list of selected asset names
     """
+    
     n = len(assets)
+    # Validate asset count
+    if n > MAX_ASSETS:
+        raise ValueError(f"Too many assets ({n}). Maximum allowed: {MAX_ASSETS}")
+    
+    logger.info(f"Building QUBO....")
+    
     qp = QuadraticProgram()
 
     # Create binary variables for each asset
     for t in assets:
         qp.binary_var(name=t)
-
+    
     # Adaptive lambda scaling: lower user_risk → higher penalty on variance
-    lam_min, lam_max = 0.1, 10
-    lam = lam_min + (1 - user_risk)**2 * (lam_max - lam_min)
+    lam = LAMBDA_MIN + (1 - user_risk)**2 * (LAMBDA_MAX - LAMBDA_MIN)
 
     # Linear term: reward for return
     linear = {assets[i]: -mu.iloc[i] for i in range(n)}
@@ -91,9 +128,21 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
     return qubo
 
 def solve_qubo_with_qaoa(qubo: QuadraticProgram, assets: List[str], reps: int=2, maxiter: int=200) -> Tuple[np.ndarray, List[str]]:
+    """
+    Solve QUBO problem using QAOA quantum algorithm.
+    
+    Args:
+        qubo: Quadratic Unconstrained Binary Optimization problem
+        assets: List of asset names
+        reps: QAOA repetitions (circuit depth)
+        maxiter: Maximum iterations for classical optimizer
+    
+    Returns:
+        Tuple of (selection vector, selected asset names)
+    """
+    logger.info(f"Starting QAOA optimization....")
+    
     optimizer = COBYLA(maxiter=maxiter)
-
-    # Sampler does not take a seed
     sampler = Sampler()  # exact expectation-based
 
     # Initialize QAOA
@@ -105,7 +154,6 @@ def solve_qubo_with_qaoa(qubo: QuadraticProgram, assets: List[str], reps: int=2,
 
     selection_vec = np.array([int(result[x.name]) for x in qubo.variables])
     selected_assets = [assets[i] for i, v in enumerate(selection_vec) if v > 0]
-
     return selection_vec, selected_assets
 
 
@@ -140,7 +188,9 @@ def get_weights_from_selection(selection_vec: np.ndarray, mu: pd.Series, cov: pd
     n = len(idx)
 
     # Minimum weight for each asset to avoid zero allocation
-    bounds = [(min_weight, 1) for _ in range(n)]
+    bounds = [(MIN_WEIGHT_PCT, 1) for _ in range(n)]
+    
+    logger.info(f"Optimizing weights....")
 
     # Constraint: sum of weights = 1
     cons = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
@@ -167,9 +217,10 @@ def get_weights_from_selection(selection_vec: np.ndarray, mu: pd.Series, cov: pd
     res = minimize(objective, x0, bounds=bounds, constraints=cons)
 
     if not res.success:
-        print("Optimization failed:", res.message)
-        return None, None, None
-
+        # Fallback to equal weights instead of returning None
+        equal_weights = np.ones(n) / n
+        return equal_weights, selected_mu, cov.iloc[idx, idx]
+    
     return res.x, selected_mu, cov.iloc[idx, idx]
 
 def monte_carlo_portfolio(mu: pd.Series, cov: pd.DataFrame, weights: np.ndarray, horizon_days: int=30, n_sims: int=5000, alpha: float=0.05, seed: int=123) -> Tuple[float, float, float, float, np.ndarray]:
@@ -326,6 +377,7 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
     Returns:
         dict: Simulation results with enhanced risk metrics
     """
+    logger.info(f"Monte Carlo simulation....")
     daily_returns = returns / 252
     daily_cov = cov_matrix / 252
     
@@ -359,13 +411,18 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
     final_values = simulation_results[-1, :]
     percentile_values = np.percentile(final_values, percentiles)
 
-    max_drawdowns = []
+    # Vectorized drawdown calculation (much faster than nested loops)
+    running_max = np.maximum.accumulate(simulation_results, axis=0)
+    drawdowns = (simulation_results - running_max) / running_max
+    max_drawdowns = np.abs(np.min(drawdowns, axis=0)).tolist()
+    
+    # Recovery time calculation (still needs loop but optimized)
     recovery_times = []
     underwater_periods = []
-
+    
     for i in range(num_simulations):
         simulation = simulation_results[:, i]
-        drawdowns = np.zeros(len(simulation))
+        sim_drawdowns = drawdowns[:, i]
         peak = simulation[0]
         in_drawdown = False
         drawdown_start = 0
@@ -382,10 +439,7 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
                     underwater_periods_sim.append(current_underwater)
                     current_underwater = 0
             else:
-                drawdown = (peak - value) / peak
-                drawdowns[t] = drawdown
-
-                if not in_drawdown and drawdown > 0.05:
+                if not in_drawdown and sim_drawdowns[t] < -0.05:
                     in_drawdown = True
                     drawdown_start = t
 
@@ -395,7 +449,6 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
         if in_drawdown and current_underwater > 0:
             underwater_periods_sim.append(current_underwater)
 
-        max_drawdowns.append(np.max(drawdowns))
         if underwater_periods_sim:
             underwater_periods.extend(underwater_periods_sim)
 

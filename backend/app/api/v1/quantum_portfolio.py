@@ -5,6 +5,7 @@ from app.services.quantum_service import compute_mu_cov, build_qubo, solve_qubo_
 from app.services.tickers import get_tickers
 from app.services.sentiment import sentiment_engine
 from app.services.cache_manager import cache
+from app.services.backtesting_service import run_backtest
 import numpy as np
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -32,6 +33,13 @@ class MonteCarloRequest(BaseModel):
     investment_amount: float
     investment_horizon: int
     tickers: List[str]
+
+class BacktestRequest(BaseModel):
+    weights: Dict[str, float] = Field(..., description="Portfolio weights")
+    tickers: List[str] = Field(..., description="List of ticker symbols")
+    start_date: str = Field(..., description="Start date in YYYY-MM-DD format")
+    end_date: str = Field(..., description="End date in YYYY-MM-DD format")
+    initial_investment: float = Field(..., gt=0, description="Initial investment amount")
 
 @router.post("/optimize")
 def optimize_portfolio(request: PortfolioRequest):
@@ -92,6 +100,65 @@ def compare_portfolios(request: PortfolioRequest):
             request.investment_horizon
         )
         return replace_nan(comparison)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/backtest")
+def backtest_portfolio(request: BacktestRequest):
+    """
+    Backtest a portfolio against historical data.
+    Compares optimized weights vs equal-weight baseline.
+    """
+    try:
+        result = run_backtest(
+            weights=request.weights,
+            tickers=request.tickers,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            initial_investment=request.initial_investment
+        )
+        return replace_nan(result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/backtest/cache")
+def clear_backtest_cache():
+    """
+    Clear all cached backtest results and historical price data.
+    """
+    try:
+        import sqlite3
+        cleared_count = 0
+        
+        # Get connection to cache database
+        with sqlite3.connect(cache.db_path) as conn:
+            # Get all cache keys
+            cursor = conn.execute("SELECT key FROM cache")
+            all_keys = [row[0] for row in cursor.fetchall()]
+            
+            # Filter backtest-related keys (both prices and results)
+            backtest_keys = [
+                key for key in all_keys 
+                if key.startswith('backtest_prices:') or key.startswith('backtest_result:')
+            ]
+            
+            # Delete each backtest key
+            for key in backtest_keys:
+                cache.delete(key)
+                cleared_count += 1
+        
+        return {
+            "status": "success",
+            "message": f"Cleared {cleared_count} backtest cache entries",
+            "cleared_count": cleared_count,
+            "types_cleared": ["backtest_prices", "backtest_result"]
+        }
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -194,6 +261,11 @@ def fetch_and_cache_data(force_refresh=False):
 def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, investment_horizon: int, k: int) -> Tuple[Dict[str, Any], pd.DataFrame, Optional[float]]:
     tickers = get_tickers()
     returns = fetch_and_cache_data()
+    
+    # compute_mu_cov now supports optional parameters:
+    # - use_sentiment: bool = True (enable/disable sentiment adjustment)
+    # - sentiment_alpha: float = 0.05 (sentiment weight)
+    # Using defaults: sentiment enabled with 5% weight
     mu, cov = compute_mu_cov(returns, tickers)
 
     qubo = build_qubo(mu, cov, risk_tolerance, k, tickers)
@@ -226,6 +298,7 @@ def monte_carlo_analysis_logic(weights_dict: Dict[str, float], investment_amount
     tickers = get_tickers() 
     returns = fetch_and_cache_data()
 
+    # Using default sentiment settings (enabled with 5% weight)
     _, cov = compute_mu_cov(returns, tickers)
     # Filter cov for selected assets only
     selected_assets = list(weights_dict.keys())
@@ -269,6 +342,8 @@ def calculate_comparison_metrics(user_risk, k, investment_amount, investment_hor
         # Calculate classical portfolio metrics
         tickers = get_tickers()
         returns = fetch_and_cache_data()
+        
+        # Using default sentiment settings for classical comparison
         mu, cov = compute_mu_cov(returns, tickers)
 
         from app.services.classical_service import build_and_solve_classical, classical_model

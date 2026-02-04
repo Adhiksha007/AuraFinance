@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { usePortfolioStore } from '@/state/portfolioStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export default function Portfolio() {
         result, tableData, beta, mcData, sentiment,
         setInputs, setResults, reset
     } = usePortfolioStore();
+
+    const navigate = useNavigate();
 
     // Effect to handle restoration sequence
     // Effect to handle restoration sequence
@@ -134,6 +137,18 @@ export default function Portfolio() {
         } catch (error) {
             console.error("MC Analysis failed:", error);
         }
+    };
+
+    const handleNavigateToBacktest = () => {
+        if (!result?.portfolio_config) return;
+
+        navigate('/backtest', {
+            state: {
+                weights: result.portfolio_config.weights,
+                tickers: result.portfolio_config.selected_assets,
+                investmentAmount: Number(amount)
+            }
+        });
     };
 
 
@@ -327,11 +342,28 @@ export default function Portfolio() {
                 </div>
                 {loadingStep === 'complete' && result && (
                     <div className="flex gap-2">
-                        <Button onClick={() => { setLoadingStep('idle'); reset(); }} variant="ghost" className="text-muted-foreground hover:text-destructive">
+                        <Button
+                            onClick={() => { setLoadingStep('idle'); reset(); }}
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-destructive"
+                        >
                             Clear
                         </Button>
-                        <Button onClick={downloadPDF} variant="outline" className="gap-2">
-                            <Download className="h-4 w-4" /> Export Report
+                        <Button
+                            onClick={handleNavigateToBacktest}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            <BarChart3 className="h-4 w-4" />
+                            Backtest
+                        </Button>
+                        <Button
+                            onClick={downloadPDF}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            <Download className="h-4 w-4" />
+                            Export Report
                         </Button>
                     </div>
                 )}

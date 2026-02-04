@@ -37,6 +37,7 @@ def background_load():
     import qiskit_algorithms
     import qiskit_optimization.algorithms
     import qiskit_optimization.converters
+    from app.services.sentiment import sentiment_engine
 
 @app.on_event("startup")
 async def startup_event():

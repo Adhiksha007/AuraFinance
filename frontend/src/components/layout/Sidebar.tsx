@@ -3,10 +3,10 @@ import {
     Briefcase,
     Sparkles,
     TrendingUp,
-    GraduationCap,
     Target,
     Newspaper,
-    Star
+    Star,
+    Zap
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -29,7 +29,7 @@ const menuItems = [
     {
         section: "Optimization",
         items: [
-            { name: "Aid & Debt", icon: GraduationCap, path: "/financial-aid" },
+            { name: "Comparison", icon: Zap, path: "/comparison" },
             { name: "Goal Planner", icon: Target, path: "/goals" }
         ]
     },
@@ -67,6 +67,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     fixed left-0 top-0 h-screen z-50 bg-card/70 backdrop-blur-md border-r border-border flex flex-col py-6 px-4 transition-all duration-300 ease-in-out
                     w-64
                     min-[650px]:w-20 min-[1100px]:w-64
+                    rounded-r-2xl
                     ${isOpen ? 'translate-x-0' : '-translate-x-full min-[650px]:translate-x-0'}
                 `}
             >

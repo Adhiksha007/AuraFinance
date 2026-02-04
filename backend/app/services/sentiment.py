@@ -161,7 +161,6 @@ class SentimentAnalyzer:
         # Check cache first
         cached_data = cache.get(cache_key)
         if cached_data is not None:
-            print("✅ Using cached sentiment data")
             return
 
         df = self.get_news(tickers, timeout=12, limit=None)
@@ -171,7 +170,6 @@ class SentimentAnalyzer:
             cache.set(cache_key, (pd.DataFrame(), pd.DataFrame()), ttl_seconds=3600)
             return
 
-        print("🔥 Waking up the model... please wait.")
         self._query_hf_api(["Just warming up the engine."])
         time.sleep(15)
 
@@ -195,7 +193,6 @@ class SentimentAnalyzer:
         
         # Cache for 1 hour
         cache.set(cache_key, (news_data, sentiment_wide), ttl_seconds=3600)
-        print("✅ Sentiment data cached for 1 hour")
 
     def get_latest_sentiment(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Get latest sentiment from cache, rebuild if expired."""

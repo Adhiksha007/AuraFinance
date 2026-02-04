@@ -70,14 +70,23 @@ const containerVariants: Variants = {
     show: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.15
+            staggerChildren: 0.08,
+            delayChildren: 0.1
         }
     }
 };
 
 const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+            duration: 0.5,
+            ease: [0.25, 0.46, 0.45, 0.94] // Custom easing for smooth motion
+        }
+    }
 };
 
 const MarketTrends = () => {
@@ -436,18 +445,38 @@ const MarketTrends = () => {
                             <motion.div
                                 key={sector.name}
                                 variants={itemVariants}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
+                                className={`group relative overflow-hidden bg-gradient-to-br ${sector.change >= 0
+                                    ? 'from-green-500/5 via-card to-card border-green-500/20'
+                                    : 'from-red-500/5 via-card to-card border-red-500/20'
+                                    } p-5 rounded-2xl border shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default backdrop-blur-sm`}
                             >
-                                <div className="flex flex-col">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-bold text-lg truncate max-w-[180px] text-foreground">{sector.name}</h4>
+                                {/* Gradient overlay on hover */}
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${sector.change >= 0 ? 'from-green-500/10 to-transparent' : 'from-red-500/10 to-transparent'
+                                    }`} />
+
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'
+                                                } animate-pulse`} />
+                                            <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                                                {sector.name}
+                                            </h4>
+                                        </div>
+                                        <span className="text-xs font-mono text-muted-foreground bg-secondary/70 px-2 py-1 rounded-lg w-fit backdrop-blur-sm">
+                                            {sector.ticker}
+                                        </span>
                                     </div>
-                                    <span className="text-[11px] font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded w-fit">{sector.ticker}</span>
-                                </div>
-                                <div className="text-right flex flex-col items-end">
-                                    <div className={`font-bold text-xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
-                                        {sector.change >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                                        {Math.abs(sector.change)}%
+                                    <div className="text-right flex flex-col items-end gap-1">
+                                        <div className={`font-extrabold text-2xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'
+                                            } flex items-center gap-1.5`}>
+                                            {sector.change >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                                            {sector.change > 0 ? '+' : ''}{sector.change.toFixed(2)}%
+                                        </div>
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sector.change >= 0 ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
+                                            }`}>
+                                            {sector.change >= 0 ? 'Bullish' : 'Bearish'}
+                                        </span>
                                     </div>
                                 </div>
                             </motion.div>
@@ -472,17 +501,42 @@ const MarketTrends = () => {
                             <motion.div
                                 key={sector.name}
                                 variants={itemVariants}
-                                className="bg-card p-4 rounded-xl border border-border shadow-sm flex items-center justify-between hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default"
+                                className={`group relative overflow-hidden bg-gradient-to-br ${sector.change >= 0
+                                    ? 'from-green-500/5 via-card to-card border-green-500/20'
+                                    : 'from-red-500/5 via-card to-card border-red-500/20'
+                                    } p-5 rounded-2xl border shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default backdrop-blur-sm`}
                             >
-                                <div className="flex flex-col">
-                                    <h4 className="font-bold text-lg truncate max-w-[180px] text-foreground">{sector.name}</h4>
-                                    <span className="text-[11px] font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded w-fit mb-1">{sector.ticker}</span>
-                                    <span className="text-xs font-semibold text-muted-foreground">Price: ₹{sector.current_price.toLocaleString()}</span>
-                                </div>
-                                <div className="text-right flex flex-col items-end">
-                                    <div className={`font-bold text-xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center gap-1`}>
-                                        {sector.change >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                                        {Math.abs(sector.change)}%
+                                {/* Gradient overlay on hover */}
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${sector.change >= 0 ? 'from-green-500/10 to-transparent' : 'from-red-500/10 to-transparent'
+                                    }`} />
+
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'
+                                                } animate-pulse`} />
+                                            <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                                                {sector.name}
+                                            </h4>
+                                        </div>
+                                        <span className="text-xs font-mono text-muted-foreground bg-secondary/70 px-2 py-1 rounded-lg w-fit backdrop-blur-sm">
+                                            {sector.ticker}
+                                        </span>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <span className="text-xs font-bold text-muted-foreground">₹</span>
+                                            <span className="text-sm font-bold text-foreground">{sector.current_price.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end gap-1">
+                                        <div className={`font-extrabold text-2xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'
+                                            } flex items-center gap-1.5`}>
+                                            {sector.change >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                                            {sector.change > 0 ? '+' : ''}{sector.change.toFixed(2)}%
+                                        </div>
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sector.change >= 0 ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
+                                            }`}>
+                                            {sector.change >= 0 ? 'Bullish' : 'Bearish'}
+                                        </span>
                                     </div>
                                 </div>
                             </motion.div>

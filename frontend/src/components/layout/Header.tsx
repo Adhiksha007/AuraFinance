@@ -118,7 +118,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     };
 
     return (
-        <header className="flex items-center justify-between px-4 md:px-8 py-5 border-b border-border bg-background backdrop-blur-sm sticky top-0 z-40">
+        <header className="flex items-center justify-between px-4 md:px-8 py-5 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40 mt-4 rounded-2xl shadow-sm">
             {/* Left: Menu Button (Mobile), User Welcome & Search */}
             <div className="flex items-center gap-4 md:gap-12 flex-1">
 

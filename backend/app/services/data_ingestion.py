@@ -1,3 +1,5 @@
+from app.services.sentiment import sentiment_engine
+from app.services.cache_manager import cache
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
@@ -5,8 +7,6 @@ import concurrent.futures
 import numpy as np
 import joblib
 from typing import List, Dict, Any, Optional
-from app.services.sentiment import sentiment_engine
-from app.services.cache_manager import cache
 
 def get_historical_data(ticker: str, period: str="1mo", interval: str='1d') -> pd.DataFrame:
     stock = yf.Ticker(ticker)

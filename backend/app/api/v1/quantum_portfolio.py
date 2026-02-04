@@ -78,6 +78,25 @@ def run_monte_carlo(request: MonteCarloRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/compare")
+def compare_portfolios(request: PortfolioRequest):
+    """
+    Compare quantum vs classical portfolio optimization.
+    Returns metrics for both approaches side-by-side.
+    """
+    try:
+        comparison = calculate_comparison_metrics(
+            request.risk_tolerance,
+            request.num_assets,
+            request.investment_amount,
+            request.investment_horizon
+        )
+        return replace_nan(comparison)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 def replace_nan(obj):
     """
     Recursively replace NaN and Infinite values with 0.0 (or None) to ensure JSON compliance.
@@ -172,12 +191,11 @@ def fetch_and_cache_data(force_refresh=False):
 
     return cached_returns
 
-
-
 def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, investment_horizon: int, k: int) -> Tuple[Dict[str, Any], pd.DataFrame, Optional[float]]:
     tickers = get_tickers()
     returns = fetch_and_cache_data()
     mu, cov = compute_mu_cov(returns, tickers)
+
     qubo = build_qubo(mu, cov, risk_tolerance, k, tickers)
     selected_vec, selected_assets = solve_qubo_with_qaoa(qubo, tickers, reps=2, maxiter=150)
 
@@ -226,3 +244,64 @@ def monte_carlo_analysis_logic(weights_dict: Dict[str, float], investment_amount
         percentiles=[5, 25, 50, 75, 95]
     )
     return sim_results['visualization']
+
+
+def calculate_comparison_metrics(user_risk, k, investment_amount, investment_horizon, risk_free=0.02):
+        """
+        Calculate and compare portfolio metrics using both quantum and classical methods.
+
+        Args:
+            returns (pd.DataFrame): Stock returns
+            mu (pd.Series): Expected returns
+            cov (pd.DataFrame): Covariance matrix
+            user_risk (float): Risk tolerance parameter (0–1)
+            k (int): Number of assets to select
+            risk_free (float): Risk-free rate
+
+        Returns:
+            dict: Comparison of quantum and classical portfolio metrics
+        """
+        # Calculate quantum portfolio metrics
+        quantum_metrics, _, port_beta, _ = quantum_portfolio_logic(user_risk, investment_amount, investment_horizon, k)
+        quantum_weights = {ticker : w for ticker, w in quantum_metrics['portfolio_config']['weights'].items()}
+        
+
+        # Calculate classical portfolio metrics
+        tickers = get_tickers()
+        returns = fetch_and_cache_data()
+        mu, cov = compute_mu_cov(returns, tickers)
+
+        from app.services.classical_service import build_and_solve_classical, classical_model
+        raw_metrics, mu_sub, cov_sub = build_and_solve_classical(
+            returns, mu, cov, user_risk, k
+        )
+        classical_metrics = classical_model(
+            raw_metrics, mu_sub, cov_sub
+        )
+        classical_weights = {ticker : w for ticker, w in classical_metrics['weights'].items()}
+        table_data = create_table_values(classical_weights, investment_amount, investment_horizon, risk_free, classical_metrics['annual_expected_return'], PKL_FILE)
+        classical_port_beta = calculate_portfolio_beta(table_data)
+        
+        # Prepare comparison response
+        comparison = {
+            "quantum": {
+                "selected_assets": quantum_metrics.get("portfolio_config", {}).get("selected_assets", []),
+                "weights": quantum_weights,
+                "expected_return": quantum_metrics.get("annualized_stats", {}).get("expected_return", 0),
+                "volatility": quantum_metrics.get("annualized_stats", {}).get("volatility", 0),
+                "sharpe_ratio": quantum_metrics.get("annualized_stats", {}).get("sharpe_ratio", 0),
+                "portfolio_beta": port_beta,
+                "var": quantum_metrics.get("risk_metrics", {}).get("VaR_return", 0),
+            },
+            "classical": {
+                "selected_assets": classical_metrics.get("selected_assets", []),
+                "weights": classical_metrics.get("weights", {}),
+                "expected_return": classical_metrics.get("annual_expected_return", 0),
+                "volatility": classical_metrics.get("annual_volatility", 0),
+                "sharpe_ratio": classical_metrics.get("sharpe_ratio", 0),
+                "portfolio_beta": classical_port_beta,
+                "var": classical_metrics.get("VaR_loss", 0),
+            }
+        }
+        
+        return comparison

@@ -16,7 +16,6 @@ export default function Comparison() {
         investmentAmount,
         timeHorizon,
         numAssets,
-        numAssets: storedAssets,
         comparison,
         lastConfig,
         setInputs,

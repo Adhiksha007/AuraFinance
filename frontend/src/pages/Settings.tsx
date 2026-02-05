@@ -250,7 +250,7 @@ export default function Settings() {
 
     if (error && !settings) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+            <div className="p-2 min-h-screen flex flex-col items-center justify-center bg-background gap-4">
                 <p className="text-destructive font-medium">{error}</p>
                 <button
                     onClick={() => fetchSettings()}
@@ -265,7 +265,7 @@ export default function Settings() {
     if (!settings) return null;
 
     return (
-        <div className="min-h-screen py-12 px-4 bg-background overflow-y-auto">
+        <div className="p-2 min-h-screen py-12 px-4 bg-background overflow-y-auto">
             <div className="max-w-2xl mx-auto pb-20">
                 <header className="mb-8 ml-2">
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">Settings</h1>

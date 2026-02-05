@@ -13,7 +13,13 @@ from typing import Dict, Any, Tuple, Optional, List
 import pandas as pd
 import joblib
 import os
+import json
+import asyncio
+import threading
+from fastapi.responses import StreamingResponse
 
+import logging
+logger = logging.getLogger('app.api.v1.quantum_portfolio')
 
 router = APIRouter()
 
@@ -41,50 +47,133 @@ class BacktestRequest(BaseModel):
     end_date: str = Field(..., description="End date in YYYY-MM-DD format")
     initial_investment: float = Field(..., gt=0, description="Initial investment amount")
 
-@router.post("/optimize")
-def optimize_portfolio(request: PortfolioRequest):
+@router.post("/optimize-stream")
+async def optimize_portfolio_stream(request: PortfolioRequest):
     """
-    Optimizes portfolio using Quantum/QAOA and returns comprehensive analysis.
+    Optimizes portfolio using Quantum/QAOA with real-time progress streaming via SSE.
     """
-    try:
-        results, table_data, port_beta, sentiment = quantum_portfolio_logic(
-            request.risk_tolerance,
-            request.investment_amount,
-            request.investment_horizon,
-            request.num_assets
-        )
-        # Convert table_data (DataFrame) to dict records for JSON response
-        table_data_json = table_data.to_dict(orient="records") if not table_data.empty else []
-        sentiment_json = sentiment.to_dict() if not sentiment.empty else []
-        response_data = {
-            "results": results,
-            "table_data": table_data_json,
-            "beta": port_beta,
-            "sentiment": sentiment_json
-        }
-        return  replace_nan(response_data)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    async def event_generator():
+        from app.utils.log_streamer import get_global_streamer
+        
+        streamer = get_global_streamer()
+        result_data = {}
+        error_data = {}
+        
+        try:
+            streamer.start()
+            yield f"data: {json.dumps({'type': 'info', 'message': 'Starting portfolio optimization...'})}\n\n"
+            await asyncio.sleep(0.1)
+            
+            def run_optimization():
+                try:
+                    results, table_data, port_beta, sentiment = quantum_portfolio_logic(
+                        request.risk_tolerance, request.investment_amount,
+                        request.investment_horizon, request.num_assets
+                    )
+                    result_data['success'] = {
+                        "results": results,
+                        "table_data": table_data.to_dict(orient="records") if not table_data.empty else [],
+                        "beta": port_beta,
+                        "sentiment": sentiment.to_dict() if not sentiment.empty else {}
+                    }
+                except Exception as e:
+                    import traceback
+                    error_data['error'] = {'message': str(e), 'traceback': traceback.format_exc()}
+            
+            thread = threading.Thread(target=run_optimization)
+            thread.start()
+            
+            while thread.is_alive():
+                log_msg = streamer.get_message(timeout=0.1)
+                if log_msg:
+                    yield f"data: {json.dumps({'type': 'log', 'message': log_msg})}\n\n"
+                await asyncio.sleep(0.05)
+            
+            thread.join()
+            
+            while True:
+                log_msg = streamer.get_message(timeout=0.1)
+                if not log_msg:
+                    break
+                yield f"data: {json.dumps({'type': 'log', 'message': log_msg})}\n\n"
+            
+            streamer.stop()
+            
+            if error_data:
+                yield f"data: {json.dumps({'type': 'error', 'message': error_data['error']['message']})}\n\n"
+            elif result_data:
+                yield f"data: {json.dumps({'type': 'complete', 'data': replace_nan(result_data['success'])})}\n\n" 
+                
+        except Exception as e:
+            streamer.stop()
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                           headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
 
-@router.post("/monte-carlo")
-def run_monte_carlo(request: MonteCarloRequest):
+
+
+
+@router.post("/monte-carlo-stream")
+async def run_monte_carlo_stream(request: MonteCarloRequest):
     """
-    Runs Monte Carlo simulation for a specific portfolio configuration.
+    Runs Monte Carlo simulation with real-time progress streaming via SSE.
     """
-    try:
-        data = monte_carlo_analysis_logic(
-            request.weights,
-            request.investment_amount,
-            request.investment_horizon,
-            request.tickers
-        )
-        return data
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    async def event_generator():
+        from app.utils.log_streamer import get_global_streamer
+        
+        streamer = get_global_streamer()
+        result_data = {}
+        error_data = {}
+        
+        try:
+            streamer.start()
+            yield f"data: {json.dumps({'type': 'info', 'message': 'Starting Monte Carlo simulation...'})}\n\n"
+            await asyncio.sleep(0.1)
+            
+            def run_simulation():
+                try:
+                    data = monte_carlo_analysis_logic(
+                        request.weights,
+                        request.investment_amount,
+                        request.investment_horizon,
+                        request.tickers
+                    )
+                    result_data['success'] = data
+                except Exception as e:
+                    import traceback
+                    error_data['error'] = {'message': str(e), 'traceback': traceback.format_exc()}
+            
+            thread = threading.Thread(target=run_simulation)
+            thread.start()
+            
+            while thread.is_alive():
+                log_msg = streamer.get_message(timeout=0.1)
+                if log_msg:
+                    yield f"data: {json.dumps({'type': 'log', 'message': log_msg})}\n\n"
+                await asyncio.sleep(0.05)
+            
+            thread.join()
+            
+            while True:
+                log_msg = streamer.get_message(timeout=0.1)
+                if not log_msg:
+                    break
+                yield f"data: {json.dumps({'type': 'log', 'message': log_msg})}\n\n"
+            
+            streamer.stop()
+            
+            if error_data:
+                yield f"data: {json.dumps({'type': 'error', 'message': error_data['error']['message']})}\n\n"
+            elif result_data:
+                yield f"data: {json.dumps({'type': 'complete', 'data': result_data['success']})}\n\n"
+                
+        except Exception as e:
+            streamer.stop()
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                           headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
 
 @router.post("/compare")
 def compare_portfolios(request: PortfolioRequest):
@@ -258,7 +347,7 @@ def fetch_and_cache_data(force_refresh=False):
 
     return cached_returns
 
-def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, investment_horizon: int, k: int) -> Tuple[Dict[str, Any], pd.DataFrame, Optional[float]]:
+def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, investment_horizon: int, k: int) -> Tuple[Dict[str, Any], pd.DataFrame, Optional[float]]:    
     tickers = get_tickers()
     returns = fetch_and_cache_data()
     
@@ -268,9 +357,13 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
     # Using defaults: sentiment enabled with 5% weight
     mu, cov = compute_mu_cov(returns, tickers)
 
+    logger.info("Building QUBO....")
     qubo = build_qubo(mu, cov, risk_tolerance, k, tickers)
+    
+    logger.info("QAOA optimization....")
     selected_vec, selected_assets = solve_qubo_with_qaoa(qubo, tickers, reps=2, maxiter=150)
 
+    logger.info("Optimizing weights....")
     results = unified_portfolio_analysis(
         selection_vec=selected_vec,
         selected_assets=selected_assets,
@@ -283,10 +376,13 @@ def quantum_portfolio_logic(risk_tolerance: float, investment_amount: float, inv
         alpha=ALPHA,
         seed=SEED
     )
+    
+    logger.info("Calculating portfolio metrics....")
     weights = results['portfolio_config']['weights']
     table_data = create_table_values(weights, investment_amount, investment_horizon, 0.02, results['annualized_stats']['expected_return'], PKL_FILE)
     port_beta = calculate_portfolio_beta(table_data)
     
+    logger.info("Fetching sentiment data....")
     # Sentiment data is now cached internally in sentiment.py
     news, sentiment_wide = sentiment_engine.get_latest_sentiment()
     sentiment = sentiment_wide.iloc[-1].T.reindex(mu.index)
@@ -304,9 +400,10 @@ def monte_carlo_analysis_logic(weights_dict: Dict[str, float], investment_amount
     selected_assets = list(weights_dict.keys())
 
     selected_cov = cov.loc[selected_assets, selected_assets]
-    
+    logger.info("Calculating Annualized returns....")
     annualized_returns = calculate_annual_returns(selected_assets, PKL_FILE)["Annualized Return"]
     aligned_returns = annualized_returns.reindex(selected_assets).fillna(0) # Assuming simple series, but calculate_annual_returns returns DF
+    logger.info("Monte Carlo simulation....")
     sim_results = monte_carlo_simulation(
         np.array(list(weights_dict.values())),
         annualized_returns, # passing raw values

@@ -20,13 +20,13 @@ export default function Landing() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF7] text-[#0F2922] font-sans selection:bg-[#0F2922] selection:text-white">
+        <div className="p-2min-h-screen bg-[#FDFBF7] text-[#0F2922] font-sans selection:bg-[#0F2922] selection:text-white">
 
             {/* Navbar */}
             <nav className="fixed top-0 left-0 right-0 z-50 bg-[#FDFBF7]/80 backdrop-blur-md border-b border-[#0F2922]/5">
                 <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold tracking-tight text-[#0F2922]">Aura<span className="font-serif italic text-emerald-600">Finance</span></span>
+                        <span className="text-2xl font-bold tracking-tight text-[#0F2922]">Q<span className="font-serif italic text-emerald-600">Finance</span></span>
                     </div>
 
                     {/* Desktop Nav */}
@@ -165,11 +165,11 @@ export default function Landing() {
             <div className="py-12 border-y border-[#0F2922]/5 bg-white/50">
                 <div className="max-w-7xl mx-auto px-6 flex justify-between items-center opacity-40 grayscale mix-blend-multiply flex-wrap gap-8">
                     {/* Placeholder logos */}
-                    <span className="text-xl font-bold">NASDAQ</span>
-                    <span className="text-xl font-bold">BLOOMBERG</span>
+                    <span className="text-xl font-bold">Hugging Face</span>
+                    <span className="text-xl font-bold">VADER Sentiment</span>
                     <span className="text-xl font-bold">YAHOO! FINANCE</span>
                     <span className="text-xl font-bold">FORBES</span>
-                    <span className="text-xl font-bold">TECHCRUNCH</span>
+                    <span className="text-xl font-bold">FinBert</span>
                 </div>
             </div>
 
@@ -352,7 +352,7 @@ export default function Landing() {
                 <div className="bg-[#0F2922] rounded-[3rem] p-12 md:p-20 text-white relative overflow-hidden flex flex-col md:flex-row justify-between items-center text-center md:text-left">
                     <div className="relative z-10 max-w-xl">
                         <h2 className="text-4xl md:text-6xl font-serif italic mb-6">Change the way you use your <span className="font-sans not-italic font-bold">money</span></h2>
-                        <p className="text-white/60 mb-10 text-lg">Join over million people who choose AuraFinance for fast and secure future banking.</p>
+                        <p className="text-white/60 mb-10 text-lg">Join over million people who choose QFinance for fast and secure future banking.</p>
                         <button
                             onClick={() => navigate('/login')}
                             className="bg-white text-[#0F2922] px-8 py-4 rounded-full font-bold hover:bg-[#FDFBF7] transition-colors"
@@ -371,21 +371,23 @@ export default function Landing() {
 
             {/* Footer Links */}
             <footer className="py-12 border-t border-[#0F2922]/5 bg-[#FDFBF7]">
-                <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-end">
-                    <div className="flex flex-col gap-4">
-                        <div className="text-xs text-[#0F2922]/50 font-medium uppercase tracking-widest">Account</div>
-                        <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">SignIn</a>
-                        <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">Register</a>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <div className="text-xs text-[#0F2922]/50 font-medium uppercase tracking-widest">Company</div>
-                        <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">About</a>
-                        <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">Contact</a>
+                <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-end gap-12">
+                    <div className="flex gap-12 md:gap-24">
+                        <div className="flex flex-col gap-4">
+                            <div className="text-xs text-[#0F2922]/50 font-medium uppercase tracking-widest">Account</div>
+                            <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">SignIn</a>
+                            <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">Register</a>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            <div className="text-xs text-[#0F2922]/50 font-medium uppercase tracking-widest">Company</div>
+                            <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">About</a>
+                            <a href="#" className="text-sm text-[#0F2922]/70 hover:text-[#0F2922]">Contact</a>
+                        </div>
                     </div>
 
-                    <div className="text-right mt-12 md:mt-0">
-                        <div className="text-4xl font-bold text-[#0F2922] mb-2">AuraFinance</div>
-                        <div className="text-xs text-[#0F2922]/40">© 2024 AuraFinance Inc.</div>
+                    <div className="flex flex-col items-center md:items-end gap-2 w-full md:w-auto text-center md:text-right">
+                        <div className="text-2xl font-bold text-[#0F2922]">QFinance</div>
+                        <div className="text-xs text-[#0F2922]/40">© 2024 QFinance Inc.</div>
                     </div>
                 </div>
             </footer>

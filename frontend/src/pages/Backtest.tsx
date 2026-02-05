@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { usePortfolioStore } from '@/state/portfolioStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, BarChart3, TrendingUp, AlertTriangle, Activity, Calendar, Zap, Trash2 } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
@@ -17,7 +18,19 @@ interface PortfolioData {
 export default function Backtest() {
     const navigate = useNavigate();
     const location = useLocation();
-    const portfolioData = location.state as PortfolioData;
+    const { result, snapshotConfig, amount } = usePortfolioStore();
+
+    // Use store data if available, otherwise fallback to location state (backward compatibility)
+    const portfolioData = useMemo(() => {
+        if (result?.portfolio_config) {
+            return {
+                weights: result.portfolio_config.weights,
+                tickers: result.portfolio_config.selected_assets,
+                investmentAmount: snapshotConfig?.amount || amount || 10000
+            };
+        }
+        return location.state as PortfolioData;
+    }, [result, snapshotConfig, amount, location.state]);
 
     // State management
     const [backtestData, setBacktestData] = useState<any>(null);
@@ -168,9 +181,9 @@ export default function Backtest() {
     }), []);
 
     return (
-        <div className="space-y-8 p-6 font-primary">
+        <div className="space-y-8 p-2 md:p-6 font-primary">
             {/* Header with Back Button */}
-            <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 gap-1">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -180,24 +193,25 @@ export default function Backtest() {
                         <ArrowLeft className="h-4 w-4" />
                         Back to Portfolio
                     </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-                            Historical Backtesting
-                        </h1>
-                        <p className="text-muted-foreground mt-2">
-                            Validate your portfolio against real market data
-                        </p>
-                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={handleClearCache}
+                        disabled={clearingCache}
+                        className="gap-2 text-orange-500 hover:text-orange-600 border-orange-500/20 hover:border-orange-500/40 ml-auto"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        {clearingCache ? 'Clearing...' : 'Clear Cache'}
+                    </Button>
+
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={handleClearCache}
-                    disabled={clearingCache}
-                    className="gap-2 text-orange-500 hover:text-orange-600 border-orange-500/20 hover:border-orange-500/40"
-                >
-                    <Trash2 className="h-4 w-4" />
-                    {clearingCache ? 'Clearing...' : 'Clear Cache'}
-                </Button>
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                        Historical Backtesting
+                    </h1>
+                    <p className="text-muted-foreground mt-2 text-sm md:text-base">
+                        Validate your portfolio against real market data
+                    </p>
+                </div>
             </div>
 
             {/* Portfolio Summary */}
@@ -207,7 +221,7 @@ export default function Backtest() {
                         <CardTitle>Portfolio Configuration</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-between">
                             <div>
                                 <div className="text-sm text-muted-foreground">Assets</div>
                                 <div className="font-bold">{portfolioData.tickers.join(', ')}</div>
@@ -233,7 +247,7 @@ export default function Backtest() {
             )}
 
             {/* Backtest Controls */}
-            <Card className="bg-purple-500/5 border-purple-500/20">
+            <Card className="bg-purple-500/5 backdrop-blur-md border-purple-500/20">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
@@ -244,16 +258,19 @@ export default function Backtest() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Start Date</label>
                             <Input
                                 type="date"
+                                className="w-full bg-background/50 border-input font-medium cursor-pointer rounded-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full transition-all hover:bg-background/80 hover:shadow-md active:scale-[0.99]"
                                 value={backtestPeriod.startDate}
                                 onChange={(e) => setBacktestPeriod({
                                     ...backtestPeriod,
                                     startDate: e.target.value
                                 })}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                style={{ colorScheme: "dark" }}
                                 disabled={loading}
                                 max={backtestPeriod.endDate}
                             />
@@ -262,11 +279,14 @@ export default function Backtest() {
                             <label className="text-sm font-medium">End Date</label>
                             <Input
                                 type="date"
+                                className="w-full bg-background/50 border-input font-medium cursor-pointer rounded-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full transition-all hover:bg-background/80 hover:shadow-md active:scale-[0.99]"
                                 value={backtestPeriod.endDate}
                                 onChange={(e) => setBacktestPeriod({
                                     ...backtestPeriod,
                                     endDate: e.target.value
                                 })}
+                                onClick={(e) => e.currentTarget.showPicker()}
+                                style={{ colorScheme: "dark" }}
                                 disabled={loading}
                                 min={backtestPeriod.startDate}
                                 max={new Date().toISOString().split('T')[0]}
@@ -276,7 +296,7 @@ export default function Backtest() {
                             <Button
                                 onClick={handleBacktest}
                                 disabled={loading}
-                                className="w-full"
+                                className="w-full font-bold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all"
                             >
                                 {loading ? 'Running Backtest...' : 'Run Backtest'}
                             </Button>
@@ -310,7 +330,7 @@ export default function Backtest() {
                     className="space-y-6"
                 >
                     {/* Performance Chart */}
-                    <Card className="bg-purple-500/5 border-purple-500/20">
+                    <Card className="bg-purple-500/5 backdrop-blur-md border-purple-500/20">
                         <CardHeader>
                             <CardTitle>Performance Comparison</CardTitle>
                             <CardDescription>
@@ -323,7 +343,7 @@ export default function Backtest() {
                     </Card>
 
                     {/* Metrics Comparison */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <MetricCard
                             label="Cumulative Return"
                             optimized={backtestData.optimized_portfolio.cumulative_return}
@@ -355,7 +375,7 @@ export default function Backtest() {
                     </div>
 
                     {/* Summary Card */}
-                    <Card className="bg-emerald-500/5 border-emerald-500/20">
+                    <Card className="bg-emerald-500/5 backdrop-blur-md border-emerald-500/20">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Zap className="h-5 w-5 text-emerald-500" />
@@ -424,7 +444,7 @@ function MetricCard({ label, optimized, baseline, icon: Icon, higherIsBetter }: 
     const difference = Math.abs(((optimized - baseline) / Math.abs(baseline)) * 100);
 
     return (
-        <Card className="p-4 bg-background/50 border-border hover:shadow-lg transition-all">
+        <Card className="p-4 bg-background/40 backdrop-blur-md border-border hover:shadow-lg transition-all">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                 <Icon className="h-4 w-4" />
                 {label}

@@ -99,7 +99,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 p-2">
             <header className="mb-4 flex justify-between items-end">
                 <div>
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">{ticker} Overview</h1>

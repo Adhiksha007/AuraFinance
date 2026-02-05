@@ -70,21 +70,17 @@ const containerVariants: Variants = {
     show: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.08,
-            delayChildren: 0.1
+            duration: 0.3
         }
     }
 };
 
 const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    hidden: { opacity: 0 },
     show: {
         opacity: 1,
-        y: 0,
-        scale: 1,
         transition: {
-            duration: 0.5,
-            ease: [0.25, 0.46, 0.45, 0.94] // Custom easing for smooth motion
+            duration: 0.3
         }
     }
 };
@@ -173,7 +169,7 @@ const MarketTrends = () => {
 
     return (
         <div
-            className="p-8 min-h-screen bg-background text-foreground font-sans"
+            className="p-2 min-h-screen bg-background text-foreground font-sans"
         >
             <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
@@ -198,7 +194,7 @@ const MarketTrends = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-card shadow-sm border border-border">
-                    <div className={`w-2 h-2 rounded-full ${connected ? 'bg-primary animate-pulse' : 'bg-destructive'}`} />
+                    <div className={`w-2 h-2 rounded-full ${connected ? 'bg-primary' : 'bg-destructive'}`} />
                     <span className="text-xs font-medium text-muted-foreground">
                         {connected ? 'LIVE' : 'OFFLINE'}
                     </span>
@@ -448,7 +444,7 @@ const MarketTrends = () => {
                                 className={`group relative overflow-hidden bg-gradient-to-br ${sector.change >= 0
                                     ? 'from-green-500/5 via-card to-card border-green-500/20'
                                     : 'from-red-500/5 via-card to-card border-red-500/20'
-                                    } p-5 rounded-2xl border shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default backdrop-blur-sm`}
+                                    } p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all duration-300 cursor-default backdrop-blur-sm`}
                             >
                                 {/* Gradient overlay on hover */}
                                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${sector.change >= 0 ? 'from-green-500/10 to-transparent' : 'from-red-500/10 to-transparent'
@@ -458,7 +454,7 @@ const MarketTrends = () => {
                                     <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'
-                                                } animate-pulse`} />
+                                                }`} />
                                             <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
                                                 {sector.name}
                                             </h4>
@@ -471,7 +467,7 @@ const MarketTrends = () => {
                                         <div className={`font-extrabold text-2xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'
                                             } flex items-center gap-1.5`}>
                                             {sector.change >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
-                                            {sector.change > 0 ? '+' : ''}{sector.change.toFixed(2)}%
+                                            {sector.change > 0 ? '+' : ''}{(sector.change ?? 0).toFixed(2)}%
                                         </div>
                                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sector.change >= 0 ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
                                             }`}>
@@ -504,7 +500,7 @@ const MarketTrends = () => {
                                 className={`group relative overflow-hidden bg-gradient-to-br ${sector.change >= 0
                                     ? 'from-green-500/5 via-card to-card border-green-500/20'
                                     : 'from-red-500/5 via-card to-card border-red-500/20'
-                                    } p-5 rounded-2xl border shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default backdrop-blur-sm`}
+                                    } p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all duration-300 cursor-default backdrop-blur-sm`}
                             >
                                 {/* Gradient overlay on hover */}
                                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${sector.change >= 0 ? 'from-green-500/10 to-transparent' : 'from-red-500/10 to-transparent'
@@ -514,7 +510,7 @@ const MarketTrends = () => {
                                     <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${sector.change >= 0 ? 'bg-green-500' : 'bg-red-500'
-                                                } animate-pulse`} />
+                                                }`} />
                                             <h4 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">
                                                 {sector.name}
                                             </h4>
@@ -531,7 +527,7 @@ const MarketTrends = () => {
                                         <div className={`font-extrabold text-2xl ${sector.change >= 0 ? 'text-green-500' : 'text-red-500'
                                             } flex items-center gap-1.5`}>
                                             {sector.change >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
-                                            {sector.change > 0 ? '+' : ''}{sector.change.toFixed(2)}%
+                                            {sector.change > 0 ? '+' : ''}{(sector.change ?? 0).toFixed(2)}%
                                         </div>
                                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${sector.change >= 0 ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'
                                             }`}>

@@ -66,7 +66,7 @@ export default function StockPicks() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="min-h-screen py-8 px-4 relative overflow-hidden bg-background"
+            className="p-2 min-h-screen py-8 px-4 relative overflow-hidden bg-background"
         >
             <div className="max-w-7xl mx-auto space-y-12">
                 <header className="relative z-10">

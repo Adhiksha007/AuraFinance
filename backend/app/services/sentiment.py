@@ -24,8 +24,7 @@ class SentimentAnalyzer:
         self.api_token = settings.HF_API_KEY
         self.headers = {"Authorization": f"Bearer {self.api_token}", "X-Wait-For-Model": "true"} if self.api_token else {}
 
-        self.tickers = tickers
-
+        self.tickers = tickers 
         if not self.api_token:
             print("⚠️ WARNING: HF_API_KEY not found. Using VADER sentiment only.")
 

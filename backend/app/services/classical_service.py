@@ -28,9 +28,9 @@ def solve_mvo_min_var_target(mu, cov, target_return):
     
 def classical_underperforming_portfolio(returns, mu_annual, cov_annual, risk_level, N_ASSETS_SELECT=5):
     # Select assets with the worst risk-return profile
-    RETURN_SCALER = 0.6
-    VOL_SCALER = 1.15
-    SHARPE_BOOST = 0.9
+    RETURN_SCALER = 1.0
+    VOL_SCALER = 1.0
+    SHARPE_BOOST = 1.0
     sharpe_ratios = mu_annual / (returns.std() * np.sqrt(252))
     CAP_STRENGTH = 0.65
     worst_sharpe = sharpe_ratios.sort_values(ascending=True)

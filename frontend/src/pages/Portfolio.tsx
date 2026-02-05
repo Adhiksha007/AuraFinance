@@ -23,9 +23,39 @@ import {
     Legend
 } from 'chart.js';
 import type { LegendItem, TooltipItem } from 'chart.js';
-import apiClient from '@/api/apiClient';
+import { useStreamProgress } from '@/hooks/useSSEStream';
+import LoggerProgress from '@/components/LoggerProgress';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, ArcElement, Title, Tooltip, Legend);
+
+// Type definitions for SSE streams
+interface OptimizeRequest {
+    risk_tolerance: number;
+    investment_amount: number;
+    investment_horizon: number;
+    num_assets: number;
+}
+
+interface OptimizeResponse {
+    results: any;
+    table_data: any;
+    beta: number | null;
+    sentiment: any;
+}
+
+interface MonteCarloRequest {
+    weights: any;
+    investment_amount: number;
+    investment_horizon: number;
+    tickers: string[];
+}
+
+interface MonteCarloVisualization {
+    dates: string[];
+    percentiles: Record<string, number[]>;
+    mean_path: number[];
+    sample_paths: number[][];
+}
 
 const generateColors = (count: number) => {
     const palette = [
@@ -45,16 +75,48 @@ export default function Portfolio() {
 
     const {
         risk, amount, horizon, assets,
-        result, tableData, beta, mcData, sentiment,
+        result, tableData, beta, mcData, sentiment, snapshotConfig,
         setInputs, setResults, reset
     } = usePortfolioStore();
 
     const navigate = useNavigate();
 
-    // Effect to handle restoration sequence
+    // SSE Streaming hooks for optimization and Monte Carlo
+    const {
+        stream: streamOptimize,
+        logs: optimizeLogs,
+        isStreaming: isOptimizeStreaming,
+        reset: resetOptimize,
+    } = useStreamProgress<OptimizeRequest, OptimizeResponse>('/quantum/optimize-stream');
+
+    const {
+        stream: streamMonteCarlo,
+        logs: monteCarloLogs,
+        isStreaming: isMonteCarloStreaming,
+        reset: resetMonteCarlo,
+    } = useStreamProgress<MonteCarloRequest, MonteCarloVisualization>('/quantum/monte-carlo-stream');
+
+    // Combined logs for single progress display
+    const [combinedLogs, setCombinedLogs] = useState<string[]>([]);
+    const isProcessing = loadingStep === 'optimizing' || loadingStep === 'simulating'; // Synchronized with isLoading
+
+
+    // Update logs based on current active step (do not combine them)
+    useEffect(() => {
+        if (isOptimizeStreaming) {
+            setCombinedLogs(optimizeLogs);
+        } else if (isMonteCarloStreaming) {
+            // When switching to simulation, ensure we show MC logs
+            setCombinedLogs([...optimizeLogs, ...monteCarloLogs]);
+        }
+    }, [optimizeLogs, monteCarloLogs, isOptimizeStreaming, isMonteCarloStreaming]);
+
     // Effect to handle restoration sequence
     useEffect(() => {
         if (result && isRestoring) {
+            if (snapshotConfig) {
+                setInputs(snapshotConfig);
+            }
             setLoadingStep('restoring');
 
             // 1. Defer heavy chart rendering slightly to let the tab transition finish smoothly
@@ -85,55 +147,81 @@ export default function Portfolio() {
         }
     }, [loadingStep, isRestoring]);
 
+    // Update combined logs when individual logs change
+    useEffect(() => {
+        const allLogs = [...optimizeLogs, ...monteCarloLogs];
+        setCombinedLogs(allLogs);
+    }, [optimizeLogs, monteCarloLogs]);
+
     const reportRef = useRef<HTMLDivElement>(null);
 
     const handleOptimize = async () => {
+        // Reset logs and results for fresh run
+        setCombinedLogs([]);
+        resetOptimize();
+        resetMonteCarlo();
         setLoadingStep('optimizing');
-        setResults({ mcData: null, sentiment: null });
+        setResults({
+            result: null,
+            tableData: [], // Or null if type allows
+            beta: null,
+            mcData: null,
+            sentiment: null,
+            snapshotConfig: {
+                risk,
+                amount,
+                horizon,
+                assets
+            }
+        });
+        setChartsReady(false);
 
         try {
-            console.log("🧠 Optimizing...");
-            // 1. Optimization Step
-            const response = await apiClient.post('/quantum/optimize', {
+            // 1. Optimization Step with SSE streaming
+            const optimizationData = await streamOptimize({
                 risk_tolerance: risk[0],
                 investment_amount: Number(amount),
                 investment_horizon: Number(horizon),
                 num_assets: Number(assets)
             });
-            console.log("Optimization completed");
 
-            setResults({
-                result: response.data.results,
-                tableData: response.data.table_data,
-                beta: response.data.beta,
-                sentiment: response.data.sentiment
-            });
+            // Check if we have a result from the stream
+            if (optimizationData) {
+                setResults({
+                    result: optimizationData.results,
+                    tableData: optimizationData.table_data,
+                    beta: optimizationData.beta,
+                    sentiment: optimizationData.sentiment
+                });
 
-            // 2. Simulation Step
-            setLoadingStep('simulating');
-            await runMonteCarlo(response.data.results.portfolio_config.weights, response.data.results.portfolio_config.selected_assets);
+                // 2. Simulation Step with SSE streaming
+                setLoadingStep('simulating');
+                await runMonteCarlo(optimizationData.results.portfolio_config.weights, optimizationData.results.portfolio_config.selected_assets);
+            } else {
+                console.error('No optimization data returned');
+            }
 
-            // 3. Complete
             setLoadingStep('complete');
-
         } catch (error) {
-            console.error("Process failed:", error);
-            alert("Optimization failed. Please check backend.");
+            console.error('Optimization failed:', error);
             setLoadingStep('idle');
         }
     };
 
     const runMonteCarlo = async (weights: any, tickers: string[]) => {
         try {
-            console.log("🎲 Running Monte Carlo...");
-            const response = await apiClient.post('/quantum/monte-carlo', {
+            const monteCarloData = await streamMonteCarlo({
                 weights: weights,
                 investment_amount: Number(amount),
                 investment_horizon: Number(horizon),
                 tickers: tickers
             });
-            console.log("MC Completed");
-            setResults({ mcData: response.data });
+            // Check if we have a result from the stream
+            if (monteCarloData) {
+                setResults({ mcData: monteCarloData });
+            } else {
+                console.error('No Monte Carlo data returned');
+            }
         } catch (error) {
             console.error("MC Analysis failed:", error);
         }
@@ -334,25 +422,25 @@ export default function Portfolio() {
     const isLoading = ['optimizing', 'simulating', 'restoring'].includes(loadingStep);
 
     return (
-        <div className="space-y-8 p-6 font-primary relative" ref={reportRef}>
-            <div className="flex justify-between items-center">
+        <div className="space-y-8 p-2 font-primary relative" ref={reportRef}>
+            <div className="flex justify-between items-center max-[699px]:flex-col max-[699px]:items-start max-[699px]:gap-4">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent">Quantum Portfolio</h1>
                     <p className="text-muted-foreground mt-2">AI-Optimized Asset Allocation & Risk Analysis</p>
                 </div>
                 {loadingStep === 'complete' && result && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 max-[699px]:w-full max-[699px]:mt-0">
                         <Button
                             onClick={() => { setLoadingStep('idle'); reset(); }}
                             variant="ghost"
-                            className="text-muted-foreground hover:text-destructive"
+                            className="text-muted-foreground hover:text-destructive max-[699px]:flex-1 max-[699px]:text-xs"
                         >
                             Clear
                         </Button>
                         <Button
                             onClick={handleNavigateToBacktest}
                             variant="outline"
-                            className="gap-2"
+                            className="gap-2 max-[699px]:flex-1 max-[699px]:text-xs"
                         >
                             <BarChart3 className="h-4 w-4" />
                             Backtest
@@ -360,7 +448,7 @@ export default function Portfolio() {
                         <Button
                             onClick={downloadPDF}
                             variant="outline"
-                            className="gap-2"
+                            className="gap-2 max-[699px]:flex-1 max-[699px]:text-xs"
                         >
                             <Download className="h-4 w-4" />
                             Export Report
@@ -370,7 +458,7 @@ export default function Portfolio() {
             </div>
 
             {/* Input Configuration */}
-            <Card className="bg-card/50 backdrop-blur-md border-muted transition-all duration-300">
+            <Card className="bg-card/50 backdrop-blur-lg border-muted transition-all duration-300">
                 <CardHeader>
                     <CardTitle>Configuration</CardTitle>
                     <CardDescription>Customize your investment parameters.</CardDescription>
@@ -400,15 +488,27 @@ export default function Portfolio() {
                         <Input type="number" value={assets} onChange={(e) => setInputs({ assets: Number(e.target.value) })} disabled={isLoading} />
                     </div>
 
-                    <Button
-                        onClick={handleOptimize}
-                        disabled={isLoading}
-                        className={`md:col-span-2 lg:col-span-4 font-bold transition-all duration-500 ${isLoading ? 'opacity-80' : 'hover:scale-[1.01]'}`}
-                    >
-                        {isLoading ? "Processing..." : "Generate Optimal Portfolio"}
-                    </Button>
+                    {!(isOptimizeStreaming || isMonteCarloStreaming) ? (
+                        <Button
+                            onClick={handleOptimize}
+                            className="md:col-span-2 lg:col-span-4 font-bold transition-all duration-500 hover:shadow-lg hover:-translate-y-0.2 hover:scale-101"
+                        >
+                            Generate Optimal Portfolio
+                        </Button>
+                    ) : (
+                        <div className="md:col-span-2 lg:col-span-4 mt-4">
+                            <LoggerProgress
+                                logs={combinedLogs}
+                                isActive={isProcessing}
+                                title={loadingStep === 'simulating' ? "Monte Carlo Simulation" : "Portfolio Optimization"}
+                                maxHeight="16rem"
+                            />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
+
+            {/* Content Wrapper */}
 
             {/* Content Wrapper */}
             <div className="relative min-h-[500px]">
@@ -438,13 +538,9 @@ export default function Portfolio() {
                                     exit={{ opacity: 0, y: -10 }}
                                     className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent"
                                 >
-                                    {loadingStep === 'optimizing' && "🧠 Optimizing Quantum State..."}
-                                    {loadingStep === 'simulating' && "🎲 Running Monte Carlo Simulations..."}
                                     {loadingStep === 'restoring' && "♻️ Restoring Analysis..."}
                                 </motion.div>
                                 <p className="text-muted-foreground animate-pulse">
-                                    {loadingStep === 'optimizing' && `Selecting best assets from ${assets} candidates...`}
-                                    {loadingStep === 'simulating' && `Projecting ${horizon} years into the future...`}
                                     {loadingStep === 'restoring' && "Loading saved data securely..."}
                                 </p>
                             </div>
@@ -462,7 +558,7 @@ export default function Portfolio() {
                         className="space-y-8"
                     >
                         {/* 1. Top Section: Portfolio Analysis (3x3 Grid) */}
-                        <div className="bg-muted/30 p-6 rounded-2xl border border-border/50">
+                        <div className="bg-muted/50 backdrop-blur-lg p-6 rounded-2xl border border-border/50">
                             <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                 <Target className="h-5 w-5 text-primary" /> Key Performance Indicators
                             </h3>
@@ -476,7 +572,7 @@ export default function Portfolio() {
                                 <KPICard title="ROI" value={`${(result.projections.ROI * 100).toFixed(2)}%`} icon={ArrowUpCircle} colorClass="text-foreground" bgClass="bg-red-500/5 border-red-500/20" />
 
                                 <KPICard title="CAGR" value={`${(result.projections.CAGR * 100).toFixed(2)}%`} icon={Target} colorClass="text-foreground" bgClass="bg-emerald-500/5 border-emerald-500/20" />
-                                <Card className='bg-emerald-500/5 border-emerald-500/20 h-full hover:scale-105 transition-transform duration-300'>
+                                <Card className='bg-emerald-500/5 backdrop-blur-md border-emerald-500/20 h-full hover:scale-105 transition-transform duration-300'>
                                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Maximize2 className="h-4 w-4" /> Projected Range</CardTitle></CardHeader>
                                     <CardContent>
                                         <div className="text-xl font-bold flex flex-col sm:flex-row gap-1">
@@ -491,9 +587,9 @@ export default function Portfolio() {
                         </div>
 
                         {/* 2. Middle Section: Allocation & Risk (Side-by-Side) */}
-                        <div className="grid gap-8 md:grid-cols-2">
+                        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
                             {/* Asset Allocation */}
-                            <Card className='bg-emerald-500/5 border-emerald-500/20 h-full'>
+                            <Card className='bg-emerald-500/5 backdrop-blur-md border-emerald-500/20 h-full'>
                                 <CardHeader><CardTitle>Asset Allocation</CardTitle></CardHeader>
                                 <CardContent className="h-[400px] flex items-center justify-center relative">
                                     {pieData && chartsReady ? (
@@ -509,7 +605,7 @@ export default function Portfolio() {
                             </Card>
 
                             {/* Detailed Risk Analysis */}
-                            <Card className='bg-emerald-500/5 border-emerald-500/20 h-full'>
+                            <Card className='bg-emerald-500/5 backdrop-blur-lg border-emerald-500/20 h-full'>
                                 <CardHeader><CardTitle>Risk Analysis</CardTitle></CardHeader>
                                 <CardContent className="space-y-4">
                                     <RiskRow label="95% VaR (Loss)" value={`-$${result.risk_metrics.VaR_loss.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={AlertTriangle} theme="red" />
@@ -523,7 +619,7 @@ export default function Portfolio() {
                         </div>
 
                         {/* 3. Monte Carlo Chart */}
-                        <Card className='bg-emerald-500/5 border-emerald-500/20 h-full'>
+                        <Card className='bg-emerald-500/5 backdrop-blur-md border-emerald-500/20 h-full'>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     Monte Carlo Simulation (1000 Runs)
@@ -537,7 +633,7 @@ export default function Portfolio() {
 
                         {/* 4. AI Sentiment Analysis */}
                         {sentiment && (
-                            <Card className='bg-blue-500/5 border-blue-500/20'>
+                            <Card className='bg-blue-500/5 backdrop-blur-md border-blue-500/20'>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Zap className="h-5 w-5 text-blue-500" /> AI Sentiment Analysis
@@ -548,7 +644,6 @@ export default function Portfolio() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {result.portfolio_config.selected_assets.map((ticker: string) => {
                                             const score = sentiment[ticker] || 0;
-                                            console.log(ticker, score);
                                             const isBullish = score > 0;
                                             const percentage = Math.min(Math.abs(score) * 100, 100);
 
@@ -587,7 +682,7 @@ export default function Portfolio() {
 
                         {/* 5. Holdings Table */}
                         <div className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                            <Card className='bg-emerald-500/5 border-emerald-500/20 h-full'>
+                            <Card className='bg-emerald-500/5 backdrop-blur-md border-emerald-500/20 h-full'>
                                 <CardHeader><CardTitle>Holdings Detail</CardTitle></CardHeader>
                                 <CardContent>
                                     <div className="overflow-x-auto">
@@ -629,7 +724,7 @@ export default function Portfolio() {
 function KPICard({ title, value, icon: Icon, colorClass, bgClass }: any) {
     return (
         <div className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:scale-105">
-            <Card className={`${bgClass} h-full`}>
+            <Card className={`${bgClass} backdrop-blur-md h-full`}>
                 <CardHeader className="pb-2">
                     <CardTitle className={`text-sm font-medium flex items-center gap-2 ${colorClass && !colorClass.includes('text-foreground') ? colorClass.replace('700', '600') : 'text-muted-foreground'}`}>
                         <Icon className="h-4 w-4" /> {title}

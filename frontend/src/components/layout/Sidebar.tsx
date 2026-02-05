@@ -144,7 +144,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </svg>
                     </div>
                     <span className="text-2xl font-bold tracking-tight text-foreground min-[650px]:hidden min-[1100px]:block whitespace-nowrap">
-                        Aura<span className="font-serif italic text-emerald-600">Finance</span>
+                        Q<span className="font-serif italic text-emerald-600">Finance</span>
                     </span>
                 </div>
 

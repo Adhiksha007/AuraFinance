@@ -33,8 +33,19 @@ interface ComparisonState {
         timeHorizon: number;
         numAssets: number;
     }>) => void;
-    setComparison: (comparison: ComparisonResponse) => void;
+    setComparison: (comparison: ComparisonResponse, config: {
+        riskTolerance: number;
+        investmentAmount: number;
+        timeHorizon: number;
+        numAssets: number;
+    }) => void;
     reset: () => void;
+    lastConfig: {
+        riskTolerance: number;
+        investmentAmount: number;
+        timeHorizon: number;
+        numAssets: number;
+    } | null;
 }
 
 export const useComparisonStore = create<ComparisonState>()(
@@ -48,11 +59,13 @@ export const useComparisonStore = create<ComparisonState>()(
 
             // Default Results
             comparison: null,
+            lastConfig: null,
 
             setInputs: (inputs) => set((state) => ({ ...state, ...inputs })),
-            setComparison: (comparison) => set({ comparison }),
+            setComparison: (comparison, config) => set({ comparison, lastConfig: config }),
             reset: () => set({
-                comparison: null
+                comparison: null,
+                lastConfig: null
             })
         }),
         {
@@ -72,7 +85,8 @@ export const useComparisonStore = create<ComparisonState>()(
                 investmentAmount: state.investmentAmount,
                 timeHorizon: state.timeHorizon,
                 numAssets: state.numAssets,
-                comparison: state.comparison
+                comparison: state.comparison,
+                lastConfig: state.lastConfig
             }) as unknown as ComparisonState,
         }
     )

@@ -107,16 +107,16 @@ const GoalPlanner: React.FC = () => {
     const { probability, gap, isScenarioGood, monthlyNeeded } = getScenarioMetrics();
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="p-2 max-w-7xl mx-auto space-y-8">
             {/* Header */}
-            <div className="flex justify-between items-start">
+            <div className="flex grid-cols-2 items-start">
                 <div>
                     <h1 className="text-4xl font-bold">{goal.name}</h1>
                     <p className="text-muted-foreground mt-1">Target: ${goal.target_amount.toLocaleString()} by {goal.target_date}</p>
                 </div>
                 <button
                     onClick={() => { setGoal(null); setSimulation(null); }}
-                    className="text-sm text-primary hover:underline"
+                    className="text-sm text-primary hover:underline items-end"
                 >
                     + New Goal
                 </button>
@@ -265,7 +265,7 @@ const GoalPlanner: React.FC = () => {
                     </div>
 
                     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="grid sm:grid-cols-1 justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold">Your Path to Success</h3>
                             <select
                                 value={scenarioView}

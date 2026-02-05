@@ -1,7 +1,6 @@
 from typing import List, Tuple, Dict, Any, Optional
 import numpy as np
 import pandas as pd
-import logging
 from qiskit_optimization import QuadraticProgram
 from qiskit_optimization.converters import QuadraticProgramToQubo
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
@@ -10,9 +9,6 @@ from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 
 from app.services.sentiment import sentiment_engine
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 # Constants with documentation
 DEFAULT_SENTIMENT_ALPHA = 0.05  # Default sentiment adjustment weight (5% of returns)
@@ -50,7 +46,6 @@ def compute_mu_cov(
             s = sentiment_wide.iloc[-1].T.reindex(mu.index)
             mu_adjusted = mu + (sentiment_alpha * s)
         except Exception as e:
-            logger.warning(f"Sentiment data unavailable: {e}, using base returns")
             mu_adjusted = mu
     else:
         mu_adjusted = mu
@@ -83,8 +78,6 @@ def build_qubo(mu: pd.Series, cov_matrix: pd.DataFrame, user_risk: float, k: int
     # Validate asset count
     if n > MAX_ASSETS:
         raise ValueError(f"Too many assets ({n}). Maximum allowed: {MAX_ASSETS}")
-    
-    logger.info(f"Building QUBO....")
     
     qp = QuadraticProgram()
 
@@ -140,7 +133,6 @@ def solve_qubo_with_qaoa(qubo: QuadraticProgram, assets: List[str], reps: int=2,
     Returns:
         Tuple of (selection vector, selected asset names)
     """
-    logger.info(f"Starting QAOA optimization....")
     
     optimizer = COBYLA(maxiter=maxiter)
     sampler = Sampler()  # exact expectation-based
@@ -189,8 +181,6 @@ def get_weights_from_selection(selection_vec: np.ndarray, mu: pd.Series, cov: pd
 
     # Minimum weight for each asset to avoid zero allocation
     bounds = [(MIN_WEIGHT_PCT, 1) for _ in range(n)]
-    
-    logger.info(f"Optimizing weights....")
 
     # Constraint: sum of weights = 1
     cons = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
@@ -220,7 +210,6 @@ def get_weights_from_selection(selection_vec: np.ndarray, mu: pd.Series, cov: pd
         # Fallback to equal weights instead of returning None
         equal_weights = np.ones(n) / n
         return equal_weights, selected_mu, cov.iloc[idx, idx]
-    
     return res.x, selected_mu, cov.iloc[idx, idx]
 
 def monte_carlo_portfolio(mu: pd.Series, cov: pd.DataFrame, weights: np.ndarray, horizon_days: int=30, n_sims: int=5000, alpha: float=0.05, seed: int=123) -> Tuple[float, float, float, float, np.ndarray]:
@@ -377,7 +366,6 @@ def monte_carlo_simulation(weights: np.ndarray, returns: np.ndarray, cov_matrix:
     Returns:
         dict: Simulation results with enhanced risk metrics
     """
-    logger.info(f"Monte Carlo simulation....")
     daily_returns = returns / 252
     daily_cov = cov_matrix / 252
     

@@ -12,40 +12,33 @@ type LoadingStep = 'idle' | 'quantum' | 'classical' | 'complete';
 
 export default function Comparison() {
     const {
-        riskTolerance: storedRisk,
-        investmentAmount: storedAmount,
-        timeHorizon: storedHorizon,
+        riskTolerance,
+        investmentAmount,
+        timeHorizon,
+        numAssets,
         numAssets: storedAssets,
         comparison,
+        lastConfig,
         setInputs,
         setComparison
     } = useComparisonStore();
 
-    const [riskTolerance, setRiskTolerance] = useState(storedRisk);
-    const [investmentAmount, setInvestmentAmount] = useState(storedAmount);
-    const [timeHorizon, setTimeHorizon] = useState(storedHorizon);
-    const [numAssets, setNumAssets] = useState(storedAssets);
     const [loadingStep, setLoadingStep] = useState<LoadingStep>('idle');
 
     // Restore results on mount
     useEffect(() => {
         if (comparison) {
+            if (lastConfig) {
+                setInputs(lastConfig);
+            }
             setLoadingStep('complete');
         }
-    }, [comparison]);
+    }, [comparison, lastConfig, setInputs]);
 
     const handleCompare = async () => {
         setLoadingStep('quantum');
 
         try {
-            // Save inputs to store
-            setInputs({
-                riskTolerance,
-                investmentAmount,
-                timeHorizon,
-                numAssets
-            });
-
             // Simulate quantum optimization phase
             await new Promise(resolve => setTimeout(resolve, 1500));
             setLoadingStep('classical');
@@ -60,7 +53,12 @@ export default function Comparison() {
                 num_assets: numAssets
             });
 
-            setComparison(response.data);
+            setComparison(response.data, {
+                riskTolerance,
+                investmentAmount,
+                timeHorizon,
+                numAssets
+            });
             setLoadingStep('complete');
         } catch (error) {
             console.error('Comparison failed:', error);
@@ -71,7 +69,7 @@ export default function Comparison() {
     const isLoading = ['quantum', 'classical'].includes(loadingStep);
 
     return (
-        <div className="space-y-8 p-6 font-primary">
+        <div className="space-y-8 p-2 font-primary">
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-500 bg-clip-text text-transparent">
@@ -92,7 +90,7 @@ export default function Comparison() {
                         <label className="text-sm font-medium">Risk Tolerance ({riskTolerance}%)</label>
                         <Slider
                             value={[riskTolerance]}
-                            onValueChange={(val) => setRiskTolerance(val[0])}
+                            onValueChange={(val) => setInputs({ riskTolerance: val[0] })}
                             max={100}
                             step={1}
                             disabled={isLoading}
@@ -108,7 +106,7 @@ export default function Comparison() {
                         <Input
                             type="number"
                             value={investmentAmount}
-                            onChange={(e) => setInvestmentAmount(Number(e.target.value))}
+                            onChange={(e) => setInputs({ investmentAmount: Number(e.target.value) })}
                             disabled={isLoading}
                         />
                     </div>
@@ -118,7 +116,7 @@ export default function Comparison() {
                         <Input
                             type="number"
                             value={timeHorizon}
-                            onChange={(e) => setTimeHorizon(Number(e.target.value))}
+                            onChange={(e) => setInputs({ timeHorizon: Number(e.target.value) })}
                             disabled={isLoading}
                         />
                     </div>
@@ -128,7 +126,7 @@ export default function Comparison() {
                         <Input
                             type="number"
                             value={numAssets}
-                            onChange={(e) => setNumAssets(Number(e.target.value))}
+                            onChange={(e) => setInputs({ numAssets: Number(e.target.value) })}
                             min="2"
                             max="10"
                             disabled={isLoading}

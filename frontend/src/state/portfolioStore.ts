@@ -14,10 +14,23 @@ interface PortfolioState {
     beta: number | null;
     mcData: any;
     sentiment: any;
+    snapshotConfig: {
+        risk: number[];
+        amount: number;
+        horizon: number;
+        assets: number;
+    } | null;
 
     // Actions
     setInputs: (inputs: Partial<{ risk: number[]; amount: number; horizon: number; assets: number }>) => void;
-    setResults: (results: Partial<{ result: any; tableData: any[]; beta: number | null; mcData: any; sentiment: any }>) => void;
+    setResults: (results: Partial<{
+        result: any;
+        tableData: any[];
+        beta: number | null;
+        mcData: any;
+        sentiment: any;
+        snapshotConfig: { risk: number[]; amount: number; horizon: number; assets: number } | null;
+    }>) => void;
     reset: () => void;
 }
 
@@ -36,6 +49,7 @@ export const usePortfolioStore = create<PortfolioState>()(
             beta: null,
             mcData: null,
             sentiment: null,
+            snapshotConfig: null,
 
             setInputs: (inputs) => set((state) => ({ ...state, ...inputs })),
             setResults: (results) => set((state) => ({ ...state, ...results })),
@@ -44,7 +58,8 @@ export const usePortfolioStore = create<PortfolioState>()(
                 tableData: [],
                 beta: null,
                 mcData: null,
-                sentiment: null
+                sentiment: null,
+                snapshotConfig: null
             })
         }),
         {
@@ -68,7 +83,8 @@ export const usePortfolioStore = create<PortfolioState>()(
                 tableData: state.tableData,
                 beta: state.beta,
                 mcData: state.mcData,
-                sentiment: state.sentiment
+                sentiment: state.sentiment,
+                snapshotConfig: state.snapshotConfig
             }) as unknown as PortfolioState, // explicit whitelist
         }
     )

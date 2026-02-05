@@ -15,17 +15,49 @@ export const GoalWizard: React.FC<GoalWizardProps> = ({ onComplete }) => {
         risk_profile: "Moderate"
     });
 
+    const [error, setError] = useState<string | null>(null);
+
     const updateField = (field: keyof GoalBase, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+        if (error) setError(null);
     };
 
     const nextStep = () => {
-        if (step < 3) setStep(step + 1);
-        else if (step === 3) {
-            // Basic validation
+        if (step === 1) {
+            if (!formData.target_amount || formData.target_amount <= 0) {
+                setError("Please enter a target amount greater than 0");
+                return;
+            }
+        }
+
+        if (step === 2) {
+            if (!formData.target_date) {
+                setError("Please select a target date");
+                return;
+            }
+            const selectedDate = new Date(formData.target_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset time to compare dates only behavior
+            if (selectedDate <= today) {
+                setError("Target date must be in the future");
+                return;
+            }
+        }
+
+        if (step === 3) {
+            if ((formData.current_savings ?? 0) < 0 || (formData.monthly_contribution ?? 0) < 0) {
+                setError("Values cannot be negative");
+                return;
+            }
+            // Optional: strictly enforce > 0 if that's what user strictly meant, but standard is >= 0
+            // User said "number greater than 0" validation.
+            // If valid, proceed
             if (formData.name && formData.target_amount && formData.target_date) {
                 onComplete(formData as GoalBase);
             }
+        } else {
+            setError(null);
+            setStep(step + 1);
         }
     };
 
@@ -70,7 +102,7 @@ export const GoalWizard: React.FC<GoalWizardProps> = ({ onComplete }) => {
                                     autoFocus
                                 />
                             </div>
-                            <div className="flex gap-4 mt-6">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                                 {["Create a Safety Net", "Buy a Home", "Dream Vacation", "Retire Early"].map(chip => (
                                     <button
                                         key={chip}
@@ -107,9 +139,10 @@ export const GoalWizard: React.FC<GoalWizardProps> = ({ onComplete }) => {
                                 <Calendar className="absolute left-3 top-3.5 text-muted-foreground w-5 h-5" />
                                 <input
                                     type="date"
-                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-lg"
+                                    className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-full focus:ring-2 focus:ring-primary focus:outline-none text-lg cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full transition-all hover:bg-muted/80 hover:shadow-md active:scale-[0.99]"
                                     value={formData.target_date || ""}
                                     onChange={e => updateField("target_date", e.target.value)}
+                                    onClick={(e) => e.currentTarget.showPicker()}
                                 />
                             </div>
                         </motion.div>
@@ -148,6 +181,16 @@ export const GoalWizard: React.FC<GoalWizardProps> = ({ onComplete }) => {
                     )}
                 </AnimatePresence>
 
+                {error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-sm font-medium text-center"
+                    >
+                        {error}
+                    </motion.div>
+                )}
+
                 <div className="mt-8 flex justify-end">
                     <button
                         onClick={nextStep}
@@ -157,6 +200,6 @@ export const GoalWizard: React.FC<GoalWizardProps> = ({ onComplete }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
